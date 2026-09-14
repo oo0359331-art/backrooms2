@@ -17,6 +17,7 @@ jobs:
         run: |
           node --check remastered_upgrade.js
           node --check remastered_gameplay.js
+          node --check profile_upgrade.js
       - name: Ensure gameplay and SEO enhancements are loaded
         shell: python
         run: |
@@ -34,7 +35,8 @@ jobs:
               '    <script src="./level_expansion.js"></script>',
               '    <script src="./performance_upgrade.js"></script>',
               '    <script src="./remastered_upgrade.js"></script>',
-              '    <script src="./remastered_gameplay.js"></script>'
+              '    <script src="./remastered_gameplay.js"></script>',
+              '    <script src="./profile_upgrade.js"></script>'
           ]
           insert = '\n'.join(t for t in tags if t not in s)
           if insert:
@@ -60,7 +62,7 @@ jobs:
       - name: Commit patched index
         run: |
           git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git config user.email '41898282+users.noreply.github.com'
           git add index.html
-          git diff --cached --quiet || git commit -m 'Load Remastered gameplay systems'
+          git diff --cached --quiet || git commit -m 'Load player profile customization system'
           git push
