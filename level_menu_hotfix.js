@@ -1,39 +1,60 @@
-/* Make the full implemented level roster visible even if another menu layer fails. */
+/* Backrooms Remastered — curated 8-level selector grouped by danger class. */
 (function(){
   'use strict';
   const LEVELS = [
-    ['HOSTILE','Level 0 — The Yellow Rooms','Endless yellow corridors. Something is listening.'],
-    ['NEUTRAL','Level 1 — Habitable Zone','Concrete service halls. Supplies are useful, but nothing feels safe.'],
-    ['PEACEFUL','Level 37 — Poolrooms','Warm tile, still water, and a silence that feels too perfect.'],
-    ['HOSTILE','Level 6 — Terror Hotel','A decaying hotel. Restore power and find the service elevator.'],
-    ['HOSTILE','Level 14 — Flooded Offices','Abandoned offices under rising water. Find the emergency override.'],
-    ['NEUTRAL','Level 9 — Service Tunnels','Industrial tunnels. Route power through three substations.'],
-    ['NEUTRAL','Level 21 — Endless Archive','A silent library where the lights never reach the stacks.'],
-    ['PEACEFUL','Level 3999 — Quiet Garden','An impossible indoor garden. Find the maintenance gate home.'],
-    ['PEACEFUL','Level 37B — Deep Pools','Deeper water, blue service lights, and no visible exit.']
+    {id:'x6',   cls:'HOSTILE',  name:'Level 6 — Terror Hotel',       desc:'A decaying hotel. Restore power and find the service elevator.'},
+    {id:'x14',  cls:'HOSTILE',  name:'Level 14 — Flooded Offices',   desc:'Abandoned offices under rising water. Find the emergency override.'},
+    {id:'1',    cls:'NEUTRAL',  name:'Level 1 — Habitable Zone',     desc:'Concrete service halls. Supplies are useful, but nothing feels safe.'},
+    {id:'x9',   cls:'NEUTRAL',  name:'Level 9 — Service Tunnels',    desc:'Industrial tunnels. Route power through three substations.'},
+    {id:'x21',  cls:'NEUTRAL',  name:'Level 21 — Endless Archive',   desc:'A silent library where the lights never reach the stacks.'},
+    {id:'2',    cls:'PEACEFUL', name:'Level 37 — Poolrooms',         desc:'Warm tile, still water, and a silence that feels too perfect.'},
+    {id:'x37b', cls:'PEACEFUL', name:'Level 37B — Deep Pools',       desc:'Deeper water, blue service lights, and no visible exit.'},
+    {id:'x3999',cls:'PEACEFUL', name:'Level 3999 — Quiet Garden',    desc:'An impossible indoor garden. Find the maintenance gate home.'}
   ];
+  const labels = {
+    HOSTILE:'HOSTILE — danger is expected',
+    NEUTRAL:'NEUTRAL — exploration & survival',
+    PEACEFUL:'PEACEFUL — atmosphere & discovery'
+  };
 
   function apply(){
     const sel=document.getElementById('level-select');
     if(!sel)return;
+    const previous=sel.value;
     sel.innerHTML='';
-    let current='0';
-    const groups={};
-    LEVELS.forEach(([cls,name,desc])=>{
-      const key=cls+'|'+({HOSTILE:'Hostile — danger is expected',NEUTRAL:'Neutral — exploration and survival',PEACEFUL:'Peaceful — atmosphere and discovery'}[cls]);
-      (groups[key] ||= []).push({cls,name,desc});
-    });
-    Object.entries(groups).forEach(([key,items])=>{
+    for(const cls of ['HOSTILE','NEUTRAL','PEACEFUL']){
       const og=document.createElement('optgroup');
-      og.label=key.split('|')[1];
-      items.forEach(({name})=>{ const o=document.createElement('option'); o.value = LEVELS.find(x=>x[1]===name)[0]==='Level 0 — The Yellow Rooms'?'0':({'Level 1 — Habitable Zone':'1','Level 37 — Poolrooms':'2','Level 6 — Terror Hotel':'x6','Level 14 — Flooded Offices':'x14','Level 9 — Service Tunnels':'x9','Level 21 — Endless Archive':'x21','Level 3999 — Quiet Garden':'x3999','Level 37B — Deep Pools':'x37b'}[name]||'0'); o.textContent=name; og.appendChild(o); });
+      og.label=labels[cls];
+      LEVELS.filter(x=>x.cls===cls).forEach(x=>{
+        const o=document.createElement('option');
+        o.value=x.id;
+        o.textContent=x.name;
+        o.dataset.class=x.cls;
+        o.dataset.description=x.desc;
+        og.appendChild(o);
+      });
       sel.appendChild(og);
-    });
-    const saved=window.__backroomsSelectedLevel;
-    sel.value=saved || '0';
+    }
+    const keep=LEVELS.some(x=>x.id===previous)?previous:'1';
+    sel.value=keep;
+    window.__backroomsLevelRoster=LEVELS.map(x=>({...x}));
     sel.dispatchEvent(new Event('change',{bubbles:true}));
   }
 
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',apply,{once:true}); else apply();
+  function css(){
+    if(document.getElementById('curated-level-style'))return;
+    const s=document.createElement('style');
+    s.id='curated-level-style';
+    s.textContent=`
+      #level-select{background:#090909;color:#eee;border-color:#8e7d55}
+      #level-select optgroup{font-weight:700;padding:6px;color:#d6b86a}
+      #level-select option{background:#101010;color:#eee;padding:8px}
+    `;
+    document.head.appendChild(s);
+  }
+
+  function init(){css();apply();}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});
+  else init();
   window.addEventListener('load',apply,{once:true});
 })();
