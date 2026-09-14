@@ -25,6 +25,7 @@ jobs:
           node --check living_world_upgrade.js
           node --check character_system.js
           node --check visual_remodel.js
+          node --check level0_remodel.js
       - name: Ensure gameplay, UI and SEO enhancements are loaded
         shell: python
         run: |
@@ -50,7 +51,8 @@ jobs:
               '    <script src="./remastered_ui_system.js"></script>',
               '    <script src="./living_world_upgrade.js"></script>',
               '    <script src="./character_system.js"></script>',
-              '    <script src="./visual_remodel.js"></script>'
+              '    <script src="./visual_remodel.js"></script>',
+              '    <script src="./level0_remodel.js"></script>'
           ]
           insert = '\n'.join(t for t in tags if t not in s)
           if insert:
@@ -78,5 +80,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
-          git diff --cached --quiet || git commit -m 'Load full visual remodel'
+          git diff --cached --quiet || git commit -m 'Load Level 0 visual remodel'
           git push
