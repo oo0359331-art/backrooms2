@@ -24,7 +24,8 @@ jobs:
               raise SystemExit('index.html has no </body> marker')
           tags = [
               '    <script src="./backrooms_fixes.js"></script>',
-              '    <script src="./realism_upgrade.js"></script>'
+              '    <script src="./realism_upgrade.js"></script>',
+              '    <script src="./level_expansion.js"></script>'
           ]
           insert = '\n'.join(t for t in tags if t not in s) + '\n'
           if insert.strip():
@@ -35,5 +36,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
-          git diff --cached --quiet || git commit -m 'Load Backrooms gameplay upgrades'
+          git diff --cached --quiet || git commit -m 'Load Backrooms level expansion'
           git push
