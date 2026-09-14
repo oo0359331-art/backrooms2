@@ -26,6 +26,7 @@ jobs:
           node --check character_system.js
           node --check visual_remodel.js
           node --check level0_remodel.js
+          node --check level_remodel_pack.js
       - name: Ensure gameplay, UI and SEO enhancements are loaded
         shell: python
         run: |
@@ -52,18 +53,19 @@ jobs:
               '    <script src="./living_world_upgrade.js"></script>',
               '    <script src="./character_system.js"></script>',
               '    <script src="./visual_remodel.js"></script>',
-              '    <script src="./level0_remodel.js"></script>'
+              '    <script src="./level0_remodel.js"></script>',
+              '    <script src="./level_remodel_pack.js"></script>'
           ]
           insert = '\n'.join(t for t in tags if t not in s)
           if insert:
               s = s.replace(body_marker, insert + '\n' + body_marker, 1)
 
           seo_tags = [
-              '    <meta name="description" content="Play a free Backrooms game online. Explore Level 0, Poolrooms, multiplayer survival, mysterious levels, tasks, items, and unsettling environments.">',
+              '    <meta name="description" content="Play a free Backrooms game online. Explore Level 0, Poolrooms, multiplayer survival, mysterious levels, items, and unsettling environments.">',
               '    <meta name="keywords" content="Backrooms, Backrooms game, play Backrooms, Level 0, Poolrooms, Backrooms multiplayer, Backrooms online game">',
               '    <meta name="robots" content="index, follow">',
               '    <meta property="og:title" content="The Backrooms — Play the Free Online Game">',
-              '    <meta property="og:description" content="Explore the Backrooms online with multiplayer survival, Level 0, Poolrooms, mysterious levels, tasks, and more.">',
+              '    <meta property="og:description" content="Explore the Backrooms online with multiplayer survival, Level 0, Poolrooms, mysterious levels, tasks, items, and more.">',
               '    <meta property="og:type" content="website">'
           ]
           if '<meta name="description"' not in s:
@@ -80,5 +82,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
-          git diff --cached --quiet || git commit -m 'Load Level 0 visual remodel'
+          git diff --cached --quiet || git commit -m 'Load full level remodel pack'
           git push
