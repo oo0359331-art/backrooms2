@@ -255,6 +255,19 @@
         let entityActive = false;
         let currentLevel = '0';
 
+        // Infinite procedural world
+        let worldSeed = Math.floor(Math.random() * 2147483647);
+        const CHUNK_SIZE = 28;
+        const CHUNK_RADIUS = 2;
+        const loadedChunks = new Map();
+        let infiniteFloor = null;
+        let infiniteCeiling = null;
+
+        // Entity AI
+        let entityMode = 'stalker';
+        let entityWanderTarget = new THREE.Vector3();
+        let entityThinkTimer = 0;
+
         // ----------------------------
         // STAMINA
         // ----------------------------
@@ -547,21 +560,35 @@
         // ----------------------------
         function createWallTexture(colorHex, patternColorHex) {
             const canvas = document.createElement('canvas');
-            canvas.width = 256;
-            canvas.height = 256;
+            canvas.width = 256; canvas.height = 256;
             const ctx = canvas.getContext('2d');
-            ctx.fillStyle = colorHex;
-            ctx.fillRect(0, 0, 256, 256);
-            ctx.fillStyle = patternColorHex;
-            for (let i = 0; i < 3000; i++) ctx.fillRect(Math.random() * 256, Math.random() * 256, 2, 2);
-            ctx.strokeStyle = patternColorHex;
-            ctx.lineWidth = 4;
-            for (let x = 0; x < 256; x += 32) {
-                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 256); ctx.stroke();
+            ctx.fillStyle = colorHex; ctx.fillRect(0, 0, 256, 256);
+
+            // Fine noise + grime so the walls do not look perfectly flat.
+            for (let i = 0; i < 6000; i++) {
+                const a = Math.random() * 0.22;
+                ctx.fillStyle = `rgba(0,0,0,${a})`;
+                const size = 1 + Math.random() * 3;
+                ctx.fillRect(Math.random() * 256, Math.random() * 256, size, size);
             }
+            ctx.strokeStyle = patternColorHex;
+            ctx.lineWidth = 3;
+            for (let x = 0; x <= 256; x += 32) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 256); ctx.stroke(); }
+            for (let y = 0; y <= 256; y += 32) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(256, y); ctx.stroke(); }
+
+            // A few subtle vertical grime streaks.
+            for (let i = 0; i < 14; i++) {
+                const x = Math.random() * 256;
+                const g = ctx.createLinearGradient(x, 0, x, 256);
+                g.addColorStop(0, 'rgba(0,0,0,0)');
+                g.addColorStop(.6, 'rgba(0,0,0,.08)');
+                g.addColorStop(1, 'rgba(0,0,0,.18)');
+                ctx.fillStyle = g;
+                ctx.fillRect(x, 32, 2 + Math.random() * 5, 180);
+            }
+
             const texture = new THREE.CanvasTexture(canvas);
-            texture.wrapS = THREE.RepeatWrapping;
-            texture.wrapT = THREE.RepeatWrapping;
+            texture.wrapS = THREE.RepeatWrapping; texture.wrapT = THREE.RepeatWrapping;
             texture.repeat.set(2, 2);
             return texture;
         }
@@ -584,22 +611,18 @@
 
         function createPoolTileTexture() {
             const canvas = document.createElement('canvas');
-            canvas.width = 256;
-            canvas.height = 256;
+            canvas.width = 256; canvas.height = 256;
             const ctx = canvas.getContext('2d');
-            ctx.fillStyle = '#f4f6f2';
-            ctx.fillRect(0, 0, 256, 256);
-            ctx.strokeStyle = '#a9c7bf';
-            ctx.lineWidth = 3;
-            for (let x = 0; x <= 256; x += 32) {
-                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 256); ctx.stroke();
-            }
-            for (let y = 0; y <= 256; y += 32) {
-                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(256, y); ctx.stroke();
+            ctx.fillStyle = '#f1f3ee'; ctx.fillRect(0, 0, 256, 256);
+            ctx.strokeStyle = '#a4bdb6'; ctx.lineWidth = 3;
+            for (let x = 0; x <= 256; x += 32) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 256); ctx.stroke(); }
+            for (let y = 0; y <= 256; y += 32) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(256, y); ctx.stroke(); }
+            for (let i = 0; i < 900; i++) {
+                ctx.fillStyle = `rgba(30,70,65,${Math.random() * .045})`;
+                ctx.fillRect(Math.random() * 256, Math.random() * 256, 2, 2);
             }
             const texture = new THREE.CanvasTexture(canvas);
-            texture.wrapS = THREE.RepeatWrapping;
-            texture.wrapT = THREE.RepeatWrapping;
+            texture.wrapS = THREE.RepeatWrapping; texture.wrapT = THREE.RepeatWrapping;
             texture.repeat.set(4, 4);
             return texture;
         }
@@ -688,6 +711,9 @@
         function clearLevelObjects() {
             walls.length = 0;
             entity = null;
+            loadedChunks.clear();
+            infiniteFloor = null;
+            infiniteCeiling = null;
             clearRemotePlayers();
 
             const keep = new Set([controls.getObject(), camera]);
@@ -794,6 +820,117 @@
             scene.add(border);
         }
 
+        function seededRandom(cx, cz, salt = 0) {
+            let n = (worldSeed ^ (cx * 374761393) ^ (cz * 668265263) ^ (salt * 1447)) | 0;
+            n = Math.imul(n ^ (n >>> 13), 1274126177);
+            n ^= n >>> 16;
+            return ((n >>> 0) / 4294967296);
+        }
+
+        function addChunkWall(cx, cz, x, z, w, d, h, mat, chunk) {
+            const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+            mesh.position.set(x, h / 2, z);
+            scene.add(mesh);
+            const box = new THREE.Box3().setFromObject(mesh);
+            walls.push(box);
+            chunk.objects.push(mesh);
+            chunk.boxes.push(box);
+        }
+
+        function addInfiniteChunk(cx, cz, wallMat, levelId) {
+            const key = `${cx},${cz}`;
+            if (loadedChunks.has(key)) return;
+            const chunk = { objects: [], boxes: [] };
+            loadedChunks.set(key, chunk);
+            const baseX = cx * CHUNK_SIZE;
+            const baseZ = cz * CHUNK_SIZE;
+            const t = 0.6;
+            const half = CHUNK_SIZE / 2;
+            const wallH = levelId === '1' ? 6 : 5;
+            const door = 6.5;
+
+            // Cell border, with deterministic openings on every edge.
+            const northOpen = seededRandom(cx, cz, 1) > 0.35;
+            const southOpen = seededRandom(cx, cz, 2) > 0.35;
+            const westOpen = seededRandom(cx, cz, 3) > 0.35;
+            const eastOpen = seededRandom(cx, cz, 4) > 0.35;
+
+            const horizontal = (z, open) => {
+                if (!open) { addChunkWall(cx,cz,baseX,z,CHUNK_SIZE,t,wallH,wallMat,chunk); return; }
+                const side = (CHUNK_SIZE - door) / 2;
+                addChunkWall(cx,cz,baseX - (door/2 + side/2),z,side,t,wallH,wallMat,chunk);
+                addChunkWall(cx,cz,baseX + (door/2 + side/2),z,side,t,wallH,wallMat,chunk);
+            };
+            const vertical = (x, open) => {
+                if (!open) { addChunkWall(cx,cz,x,baseZ,t,CHUNK_SIZE,wallH,wallMat,chunk); return; }
+                const side = (CHUNK_SIZE - door) / 2;
+                addChunkWall(cx,cz,x,baseZ - (door/2 + side/2),t,side,wallH,wallMat,chunk);
+                addChunkWall(cx,cz,x,baseZ + (door/2 + side/2),t,side,wallH,wallMat,chunk);
+            };
+
+            horizontal(baseZ - half, northOpen);
+            horizontal(baseZ + half, southOpen);
+            vertical(baseX - half, westOpen);
+            vertical(baseX + half, eastOpen);
+
+            // Interior wall patterns: two or three segments, always leaving a route through.
+            const pattern = Math.floor(seededRandom(cx, cz, 10) * 4);
+            const mat = wallMat;
+            if (pattern === 0) {
+                addChunkWall(cx,cz,baseX,baseZ - 4,CHUNK_SIZE - 10,t,wallH,mat,chunk);
+            } else if (pattern === 1) {
+                addChunkWall(cx,cz,baseX - 4,baseZ,t,CHUNK_SIZE - 10,wallH,mat,chunk);
+            } else if (pattern === 2) {
+                addChunkWall(cx,cz,baseX - 6,baseZ - 5,t,10,wallH,mat,chunk);
+                addChunkWall(cx,cz,baseX + 6,baseZ + 5,t,10,wallH,mat,chunk);
+            }
+
+            // Landmarks/details in Level 1.
+            if (levelId === '1' && seededRandom(cx, cz, 20) > 0.65) {
+                const px = baseX + (seededRandom(cx,cz,21)-.5) * 14;
+                const pz = baseZ + (seededRandom(cx,cz,22)-.5) * 14;
+                const pillar = new THREE.Mesh(new THREE.BoxGeometry(1.5, wallH, 1.5), mat);
+                pillar.position.set(px, wallH/2, pz);
+                scene.add(pillar);
+                const box = new THREE.Box3().setFromObject(pillar);
+                walls.push(box); chunk.objects.push(pillar); chunk.boxes.push(box);
+            }
+
+            if ((cx === 0 && cz === 0) || pattern === 3) {
+                addCeilingLight(baseX, 4.72, baseZ);
+            }
+        }
+
+        function updateInfiniteWorld() {
+            if ((currentLevel !== '0' && currentLevel !== '1') || !controls) return;
+            const p = controls.getObject().position;
+            const cx = Math.floor(p.x / CHUNK_SIZE);
+            const cz = Math.floor(p.z / CHUNK_SIZE);
+
+            for (let x = cx - CHUNK_RADIUS; x <= cx + CHUNK_RADIUS; x++) {
+                for (let z = cz - CHUNK_RADIUS; z <= cz + CHUNK_RADIUS; z++) {
+                    addInfiniteChunk(x, z, window.__backroomsWallMat, currentLevel);
+                }
+            }
+
+            for (const [key, chunk] of [...loadedChunks.entries()]) {
+                const [x,z] = key.split(',').map(Number);
+                if (Math.abs(x-cx) > CHUNK_RADIUS + 1 || Math.abs(z-cz) > CHUNK_RADIUS + 1) {
+                    for (const obj of chunk.objects) scene.remove(obj);
+                    for (const box of chunk.boxes) {
+                        const i = walls.indexOf(box);
+                        if (i >= 0) walls.splice(i,1);
+                    }
+                    loadedChunks.delete(key);
+                }
+            }
+
+            if (infiniteFloor && infiniteCeiling) {
+                infiniteFloor.position.set(p.x, -0.02, p.z);
+                infiniteCeiling.position.set(p.x, 5, p.z);
+            }
+        }
+
         function buildLevel(levelId) {
             clearLevelObjects();
             currentLevel = String(levelId);
@@ -825,17 +962,22 @@
                 ceilMat = new THREE.MeshStandardMaterial({ color: 0xdce7e2, roughness: 1 });
             }
 
-            const size = levelId === '2' ? 180 : 120;
-            const b = size / 2;
+            const size = levelId === '2' ? 180 : 2000;
+            const b = levelId === '2' ? size / 2 : Infinity;
 
             const floor = new THREE.Mesh(new THREE.PlaneGeometry(size, size), floorMat);
             floor.rotation.x = -Math.PI / 2;
+            floor.position.y = -0.02;
             scene.add(floor);
+            infiniteFloor = levelId === '2' ? null : floor;
 
             const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(size, size), ceilMat);
             ceiling.rotation.x = Math.PI / 2;
             ceiling.position.y = 5;
             scene.add(ceiling);
+            infiniteCeiling = levelId === '2' ? null : ceiling;
+
+            window.__backroomsWallMat = wallMat;
 
             const ambient = new THREE.AmbientLight(levelId === '2' ? 0xe9fff8 : 0xfffaed, levelId === '2' ? 0.95 : 0.7);
             scene.add(ambient);
@@ -850,13 +992,10 @@
                 }
             }
 
-            // Outer walls
-            addWall(0, -b, size, 2, 5, wallMat);
-            addWall(0, b, size, 2, 5, wallMat);
-            addWall(-b, 0, 2, size, 5, wallMat);
-            addWall(b, 0, 2, size, 5, wallMat);
-
-            if (levelId === '2') {
+            if (levelId === '0' || levelId === '1') {
+                // Infinite chunked worlds.
+                updateInfiniteWorld();
+            } else if (levelId === '2') {
                 const waterMat = new THREE.MeshPhysicalMaterial({
                     map: createWaterTexture(),
                     color: 0x2c9f96,
@@ -921,6 +1060,7 @@
 
             // Entity
             const entityGroup = new THREE.Group();
+            entityMode = levelId === '0' ? 'stalker' : (levelId === '1' ? 'hunter' : 'poolstalker');
             if (levelId === '2') {
                 const bodyMat = new THREE.MeshStandardMaterial({ color: 0x073e38, roughness: 1 });
                 const torso = new THREE.Mesh(new THREE.CylinderGeometry(.4, .6, 2.5, 8), bodyMat);
@@ -1023,35 +1163,67 @@
                 const dz = -velocity.z * delta;
                 tryMovePlayer(dx * 0.95, dz * 0.95);
 
-                // Entity movement. Host simulation is authoritative for multiplayer.
+                // Entity AI. Host simulation is authoritative for multiplayer.
                 if (entity && entityActive && (isHost || !peer)) {
                     const playerPos = player.position;
                     const entityPos = entity.position;
-                    const entitySpeed = (currentLevel === '2' ? 1.45 : 3.5) * delta;
+                    entityThinkTimer -= delta;
+
+                    if (entityThinkTimer <= 0) {
+                        entityThinkTimer = 1.2 + Math.random() * 1.8;
+                        const angle = Math.random() * Math.PI * 2;
+                        const radius = entityMode === 'poolstalker' ? 16 : 22;
+                        entityWanderTarget.set(
+                            playerPos.x + Math.cos(angle) * radius,
+                            0,
+                            playerPos.z + Math.sin(angle) * radius
+                        );
+                    }
+
+                    let target = entityWanderTarget;
+                    let speed = 1.2;
                     const dirX = playerPos.x - entityPos.x;
                     const dirZ = playerPos.z - entityPos.z;
                     const dist = Math.hypot(dirX, dirZ);
 
-                    if (dist > 1) {
-                        const next = entityPos.clone();
-                        next.x += (dirX / dist) * entitySpeed;
-                        next.z += (dirZ / dist) * entitySpeed;
-                        if (!checkEntityCollision(next, 0.72)) {
-                            entityPos.copy(next);
+                    if (entityMode === 'stalker') {
+                        // Level 0: aggressive once you are reasonably close.
+                        if (dist < 58) target = playerPos;
+                        speed = dist < 58 ? 3.2 : 1.0;
+                    } else if (entityMode === 'hunter') {
+                        // Level 1: patrols, then locks onto the player at short range.
+                        if (dist < 30) target = playerPos;
+                        speed = dist < 30 ? 2.8 : 1.6;
+                    } else {
+                        // Poolrooms: slower and eerie, but still persistent.
+                        if (dist < 42) target = playerPos;
+                        speed = dist < 42 ? 1.55 : 0.85;
+                    }
+
+                    const tx = target.x - entityPos.x;
+                    const tz = target.z - entityPos.z;
+                    const td = Math.hypot(tx, tz);
+                    if (td > 0.8) {
+                        const step = Math.min(speed * delta, 0.18);
+                        const nx = entityPos.clone();
+                        nx.x += (tx / td) * step;
+                        nx.z += (tz / td) * step;
+                        if (!checkEntityCollision(nx, 0.72)) {
+                            entityPos.copy(nx);
                         } else {
-                            // Try sliding along the obstacle instead of getting stuck inside it.
-                            const slideX = entityPos.clone();
-                            slideX.x += (dirX / dist) * entitySpeed;
-                            if (!checkEntityCollision(slideX, 0.72)) entityPos.x = slideX.x;
-                            const slideZ = entityPos.clone();
-                            slideZ.z += (dirZ / dist) * entitySpeed;
-                            if (!checkEntityCollision(slideZ, 0.72)) entityPos.z = slideZ.z;
+                            const sx = entityPos.clone(); sx.x += (tx / td) * step;
+                            if (!checkEntityCollision(sx, 0.72)) entityPos.x = sx.x;
+                            const sz = entityPos.clone(); sz.z += (tz / td) * step;
+                            if (!checkEntityCollision(sz, 0.72)) entityPos.z = sz.z;
                         }
                         entity.lookAt(playerPos.x, playerPos.y, playerPos.z);
-                    } else {
-                        triggerJumpscare();
                     }
+
+                    if (dist < (entityMode === 'poolstalker' ? 1.7 : 1.9)) triggerJumpscare();
                 }
+
+                // Keep the procedural world alive around the player as they travel.
+                updateInfiniteWorld();
 
                 networkTimer += delta;
                 if (networkTimer >= NETWORK_RATE) {
@@ -1368,7 +1540,7 @@
             conn.on('open',()=>{
                 connections.set(conn.peer,conn);
                 conn._playerState={id:conn.peer,x:0,y:1.6,z:0,ry:0,level:currentLevel,name:'Player',color:makePlayerColor('Player'),emote:''};
-                sendTo(conn,{type:'welcome',id:conn.peer,level:currentLevel,players:getPlayerSnapshot(),world:worldItems,exitOpen});
+                sendTo(conn,{type:'welcome',id:conn.peer,level:currentLevel,seed:worldSeed,players:getPlayerSnapshot(),world:worldItems,exitOpen});
                 sendAllPlayers();
                 setNetworkStatus('HOST • PLAYERS: '+(connections.size+1));
             });
@@ -1399,7 +1571,7 @@
             conn.on('data',data=>{
                 if(!data||!data.type) return;
                 if(data.type==='welcome'){
-                    currentLevel=String(data.level||currentLevel); buildLevel(currentLevel); camera.position.set(0,1.6,0); worldItems=Array.isArray(data.world)?data.world:[]; exitOpen=!!data.exitOpen; initializeWorldItems(); worldItems=Array.isArray(data.world)?data.world:worldItems; syncWorldMeshes(); renderRemotePlayers(data.players||{}); setNetworkStatus('CONNECTED • ROOM '+roomId.replace('backrooms-','').toUpperCase());
+                    currentLevel=String(data.level||currentLevel); if(Number.isFinite(Number(data.seed))) worldSeed=Number(data.seed); buildLevel(currentLevel); camera.position.set(0,1.6,0); worldItems=Array.isArray(data.world)?data.world:[]; exitOpen=!!data.exitOpen; initializeWorldItems(); worldItems=Array.isArray(data.world)?data.world:worldItems; syncWorldMeshes(); renderRemotePlayers(data.players||{}); setNetworkStatus('CONNECTED • ROOM '+roomId.replace('backrooms-','').toUpperCase());
                 } else if(data.type==='players'){ renderRemotePlayers(data.players||{}); }
                 else if(data.type==='world'){ currentLevel=String(data.currentLevel||currentLevel); worldItems=Array.isArray(data.items)?data.items:[]; exitOpen=!!data.exitOpen; syncWorldMeshes(); }
                 else if(data.type==='grant'){ if(inventory.length<MAX_INVENTORY) inventory.push(String(data.itemType)); if(inventoryComplete()) exitOpen=true; updateInventoryUI(); syncWorldMeshes(); }
@@ -1426,7 +1598,9 @@
         // Enhanced player start and loop helpers.
         startGame = function(mode){
             setUsername(); playerColor=makePlayerColor(username); inventory=[]; updateInventoryUI(); localEmote='';
-            currentLevel=document.getElementById('level-select').value; buildLevel(currentLevel); camera.position.set(0,1.6,0); stamina=MAX_STAMINA; updateStamina(0); document.getElementById('hud').style.display='block'; document.getElementById('chat-panel').style.display='none';
+            currentLevel=document.getElementById('level-select').value;
+            if (mode !== 'guest') worldSeed = Math.floor(Math.random() * 2147483647);
+            buildLevel(currentLevel); camera.position.set(0,1.6,0); stamina=MAX_STAMINA; updateStamina(0); document.getElementById('hud').style.display='block'; document.getElementById('chat-panel').style.display='none';
             initializeWorldItems(); entityActive=true;
             if(mode==='host') createPeerForHost(); else if(mode==='guest') connectAsGuest(document.getElementById('room-code').value); else setNetworkStatus('SOLO');
             controls.lock();
