@@ -134,3 +134,11 @@ function installBackroomsFixes(){
 
 if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',installBackroomsFixes); else installBackroomsFixes();
 })();
+
+/* Load the third-person/realism layer after the fixes layer. */
+(function(){
+  const s=document.createElement('script');
+  s.src='./realism_upgrade.js';
+  s.async=false;
+  document.head.appendChild(s);
+})();
