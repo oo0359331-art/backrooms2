@@ -127,10 +127,62 @@
             font-size: 12px;
             color: #9be7ff;
         }
+
+        #profile-row { display:flex; gap:10px; width:100%; }
+        #profile-row > * { flex:1; }
+        #hud { width:min(330px, 78vw); }
+        #inventory-panel {
+            margin-top:10px; padding:10px; background:rgba(0,0,0,.5); border:1px solid rgba(255,255,255,.35);
+            border-radius:6px; pointer-events:auto;
+        }
+        #inventory-title { font-size:12px; letter-spacing:1px; margin-bottom:6px; }
+        #inventory-slots { display:flex; gap:6px; flex-wrap:wrap; }
+        .inv-slot { min-width:76px; padding:6px; border:1px solid rgba(255,255,255,.4); background:rgba(255,255,255,.07); font-size:11px; }
+        .inv-slot.empty { opacity:.45; }
+        #chat-panel {
+            position:absolute; right:18px; bottom:18px; width:min(360px, 92vw); z-index:40; display:none;
+            color:#fff; text-shadow:1px 1px 2px #000;
+        }
+        #chat-log { height:180px; overflow:auto; padding:10px; background:rgba(0,0,0,.45); border:1px solid rgba(255,255,255,.3); border-radius:6px; }
+        .chat-line { margin:0 0 5px; font-size:12px; }
+        .chat-name { color:#7fffd4; font-weight:bold; }
+        #chat-row { display:flex; gap:6px; margin-top:6px; }
+        #chat-input { flex:1; width:auto; }
+        #chat-send { width:74px; }
+        #emote-panel { position:absolute; left:50%; transform:translateX(-50%); bottom:74px; z-index:35; display:none; gap:6px; }
+        #emote-panel button { width:auto; min-width:72px; padding:8px 10px; }
+        #toast { position:absolute; top:22px; left:50%; transform:translateX(-50%); z-index:60; background:rgba(0,0,0,.72); color:#fff; padding:10px 14px; border:1px solid rgba(255,255,255,.25); border-radius:6px; display:none; }
+        #win-screen { position:absolute; inset:0; z-index:250; display:none; align-items:center; justify-content:center; flex-direction:column; background:rgba(0,20,15,.9); color:#bfffe6; text-align:center; }
+        #win-screen h2 { font-size:clamp(2.5rem,8vw,5rem); margin:0 0 10px; text-shadow:0 0 20px #58ffd0; }
+        #win-screen button { width:auto; min-width:220px; }
+        #mobile-controls { position:absolute; inset:0; z-index:45; display:none; pointer-events:none; }
+        #mobile-look { position:absolute; inset:0; pointer-events:auto; touch-action:none; }
+        #joystick-zone { position:absolute; left:22px; bottom:24px; width:170px; height:170px; pointer-events:auto; touch-action:none; }
+        #joystick-base { position:absolute; left:0; bottom:0; width:150px; height:150px; border-radius:50%; border:2px solid rgba(255,255,255,.35); background:rgba(0,0,0,.25); }
+        #joystick-stick { position:absolute; left:42px; bottom:42px; width:66px; height:66px; border-radius:50%; background:rgba(255,255,255,.2); border:2px solid rgba(255,255,255,.5); }
+        .mobile-btn { position:absolute; pointer-events:auto; width:70px; height:70px; border-radius:50%; background:rgba(0,0,0,.45); border:2px solid rgba(255,255,255,.45); color:#fff; font-weight:bold; }
+        #mobile-sprint { right:24px; bottom:24px; }
+        #mobile-action { right:108px; bottom:100px; }
+        #mobile-emote { right:24px; bottom:106px; }
+        #mobile-chat { right:108px; bottom:24px; }
+        #remote-labels { pointer-events:none; }
+        @media (hover: none) and (pointer: coarse) {
+            #instructions { display:none; }
+            #mobile-controls { display:block; }
+            #chat-panel { bottom:200px; right:12px; }
+            #emote-panel { bottom:170px; }
+        }
     </style>
 </head>
 <body>
     <div id="jumpscare">YOU DIED</div>
+    <div id="win-screen">
+        <h2>YOU ESCAPED</h2>
+        <p id="win-text">You found the way out of Level 37.</p>
+        <button id="win-close">RETURN TO MENU</button>
+    </div>
+    <div id="toast"></div>
+
 
     <div id="start-screen">
         <h1>THE BACKROOMS</h1>
@@ -144,6 +196,10 @@
                 <option value="2">Level 37: The Poolrooms</option>
             </select>
 
+            <div id="profile-row">
+                <input id="username-input" maxlength="16" placeholder="Your username" value="Player">
+                <button id="emote-menu-btn" class="secondary" type="button">EMOTES</button>
+            </div>
             <div class="row">
                 <button id="host-btn">CREATE ROOM</button>
                 <button id="join-btn" class="secondary">JOIN ROOM</button>
@@ -159,9 +215,30 @@
         <div id="stamina-label">STAMINA</div>
         <div id="stamina-bar"><div id="stamina-fill"></div></div>
         <div id="network-status">OFFLINE</div>
+        <div id="inventory-panel">
+            <div id="inventory-title">ITEMS (E PICK UP • G DROP)</div>
+            <div id="inventory-slots"></div>
+        </div>
     </div>
 
-    <div id="instructions">WASD to Move | HOLD SHIFT to Sprint | Mouse to Look | ESC to Pause</div>
+    <div id="instructions">WASD to Move | HOLD SHIFT to Sprint | E to Interact/Pick Up | G to Drop | T to Chat | B for Emotes | Mouse to Look | ESC to Pause</div>
+    <div id="chat-panel">
+        <div id="chat-log"></div>
+        <div id="chat-row"><input id="chat-input" maxlength="120" placeholder="Type a message..."><button id="chat-send">SEND</button></div>
+    </div>
+    <div id="emote-panel">
+        <button type="button" data-emote="wave">👋 WAVE</button>
+        <button type="button" data-emote="point">👉 POINT</button>
+        <button type="button" data-emote="scared">😨 SCARED</button>
+    </div>
+    <div id="mobile-controls">
+        <div id="mobile-look"></div><div id="joystick-zone"><div id="joystick-base"></div><div id="joystick-stick"></div></div>
+        <button class="mobile-btn" id="mobile-sprint">RUN</button>
+        <button class="mobile-btn" id="mobile-action">E<br>ACTION</button>
+        <button class="mobile-btn" id="mobile-emote">EMOTE</button>
+        <button class="mobile-btn" id="mobile-chat">CHAT</button>
+    </div>
+
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/PointerLockControls.js"></script>
@@ -983,11 +1060,8 @@
                         sendAllPlayers();
                     } else if (hostConnection && hostConnection.open) {
                         sendTo(hostConnection, {
-                            type: 'position',
-                            x: player.position.x,
-                            y: player.position.y,
-                            z: player.position.z,
-                            ry: camera.rotation.y
+                            type: 'position', x: player.position.x, y: player.position.y, z: player.position.z,
+                            ry: camera.rotation.y, name: username, color: playerColor, emote: localEmote
                         });
                     }
                 }
@@ -997,6 +1071,410 @@
             prevTime = time;
             renderer.render(scene, camera);
         }
+
+
+        // ============================================================
+        // ENHANCED MULTIPLAYER / ITEMS / CHAT / EMOTES / MOBILE
+        // ============================================================
+        let username = 'Player';
+        let inventory = [];
+        const MAX_INVENTORY = 3;
+        let worldItems = [];
+        let worldItemMeshes = new Map();
+        let exitObject = null;
+        let exitOpen = false;
+        let joystickX = 0, joystickZ = 0;
+        let chatOpen = false;
+        let emoteTimeout = null;
+        let localEmote = '';
+        let playerColor = 0x4e7bd9;
+
+        const ITEM_TYPES = [
+            { id:'key', name:'Yellow Key', color:0xf2d44d, symbol:'🔑' },
+            { id:'gear', name:'Rusty Gear', color:0x777777, symbol:'⚙️' },
+            { id:'card', name:'Exit Card', color:0x7fffd4, symbol:'💳' }
+        ];
+
+        function showToast(text, ms=1800) {
+            const el = document.getElementById('toast');
+            el.textContent = text;
+            el.style.display = 'block';
+            clearTimeout(showToast.t);
+            showToast.t = setTimeout(() => el.style.display='none', ms);
+        }
+
+        function updateInventoryUI() {
+            const root = document.getElementById('inventory-slots');
+            root.innerHTML = '';
+            for (let i=0;i<MAX_INVENTORY;i++) {
+                const slot = document.createElement('div');
+                slot.className = 'inv-slot' + (inventory[i] ? '' : ' empty');
+                if (inventory[i]) {
+                    const item = ITEM_TYPES.find(x=>x.id===inventory[i]);
+                    slot.textContent = item ? `${item.symbol} ${item.name}` : inventory[i];
+                } else slot.textContent = 'EMPTY';
+                root.appendChild(slot);
+            }
+        }
+
+        function hasItem(id) { return inventory.includes(id); }
+        function inventoryComplete() { return ITEM_TYPES.every(i => hasItem(i.id)); }
+
+        function removeInventoryItem(id) {
+            const i = inventory.indexOf(id);
+            if (i >= 0) inventory.splice(i,1);
+        }
+
+        function setUsername() {
+            const raw = document.getElementById('username-input').value.trim();
+            username = (raw || 'Player').slice(0,16).replace(/[^a-zA-Z0-9 _-]/g,'');
+            if (!username) username='Player';
+            localStorage.setItem('backrooms_username', username);
+        }
+
+        function loadUsername() {
+            const saved = localStorage.getItem('backrooms_username');
+            if (saved) {
+                username = saved;
+                document.getElementById('username-input').value = saved;
+            }
+        }
+
+        function makePlayerColor(name) {
+            let h=0; for (let i=0;i<name.length;i++) h=(h*31+name.charCodeAt(i))>>>0;
+            return new THREE.Color(`hsl(${h%360},65%,58%)`).getHex();
+        }
+
+        function createNameTag(name) {
+            const canvas=document.createElement('canvas'); canvas.width=512; canvas.height=128;
+            const ctx=canvas.getContext('2d');
+            ctx.fillStyle='rgba(0,0,0,.55)'; ctx.fillRect(0,16,512,92);
+            ctx.fillStyle='#fff'; ctx.font='bold 42px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+            ctx.fillText(name,256,62);
+            const tex=new THREE.CanvasTexture(canvas); tex.needsUpdate=true;
+            const mat=new THREE.SpriteMaterial({map:tex, transparent:true, depthTest:false});
+            const sp=new THREE.Sprite(mat); sp.scale.set(2.8,.7,1); sp.position.y=2.8;
+            return sp;
+        }
+
+        function setRemoteEmote(remote, emote) {
+            const old=remote.getObjectByName('emoteSprite');
+            if(old) remote.remove(old);
+            if(!emote) return;
+            const canvas=document.createElement('canvas'); canvas.width=256; canvas.height=128;
+            const ctx=canvas.getContext('2d'); ctx.font='80px sans-serif'; ctx.textAlign='center'; ctx.fillText(emote==='wave'?'👋':emote==='point'?'👉':'😨',128,92);
+            const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(canvas), transparent:true, depthTest:false}));
+            sprite.name='emoteSprite'; sprite.scale.set(1.1,.55,1); sprite.position.y=3.4; remote.add(sprite);
+            setTimeout(()=>{ if(remote.getObjectByName('emoteSprite')===sprite) remote.remove(sprite); },1600);
+        }
+
+        function createRemotePlayer() {
+            const group = new THREE.Group();
+            const bodyMat = new THREE.MeshStandardMaterial({ color: playerColor, roughness: .7, metalness:.05 });
+            const headMat = new THREE.MeshStandardMaterial({ color: 0xf0c7a4, roughness: .9 });
+            const shoeMat = new THREE.MeshStandardMaterial({ color: 0x202020, roughness: .9 });
+            const hairMat = new THREE.MeshStandardMaterial({ color: 0x242020, roughness: .95 });
+
+            const legs=[];
+            for(const x of [-.18,.18]) {
+                const leg=new THREE.Mesh(new THREE.CapsuleGeometry ? new THREE.CapsuleGeometry(.12,.55,4,8) : new THREE.CylinderGeometry(.13,.14,.7,8), shoeMat);
+                leg.position.set(x,.42,0); group.add(leg); legs.push(leg);
+            }
+            const torso = new THREE.Mesh(new THREE.CylinderGeometry(.33,.4,1.05,12), bodyMat); torso.position.y=1.05; group.add(torso);
+            const head = new THREE.Mesh(new THREE.SphereGeometry(.33,16,12), headMat); head.position.y=1.78; group.add(head);
+            const hair = new THREE.Mesh(new THREE.SphereGeometry(.345,16,8,0,Math.PI*2,0,Math.PI*.5), hairMat); hair.position.y=1.87; group.add(hair);
+            const eyeMat = new THREE.MeshBasicMaterial({color:0x101010});
+            for(const x of [-.11,.11]) { const eye=new THREE.Mesh(new THREE.SphereGeometry(.035,8,8),eyeMat); eye.position.set(x,1.82,-.305); group.add(eye); }
+            group.userData.target = new THREE.Vector3();
+            group.userData.targetYaw = 0;
+            group.userData.name = 'Player';
+            group.userData.lastPos = new THREE.Vector3();
+            return group;
+        }
+
+        function renderRemotePlayers(players) {
+            for (const [id,state] of Object.entries(players)) {
+                if(id===localPlayerId) continue;
+                if(state.level && String(state.level)!==String(currentLevel)) { removeRemotePlayer(id); continue; }
+                let remote=remotePlayers.get(id);
+                if(!remote){ remote=createRemotePlayer(); scene.add(remote); remotePlayers.set(id,remote); }
+                remote.userData.target.set(Number(state.x)||0, Math.max(0,(Number(state.y)||1.6)-1.6), Number(state.z)||0);
+                remote.userData.targetYaw=Number(state.ry)||0;
+                if(remote.userData.name!==state.name){
+                    const old=remote.getObjectByName('nameTag'); if(old) remote.remove(old);
+                    const tag=createNameTag(state.name||'Player'); tag.name='nameTag'; remote.add(tag); remote.userData.name=state.name||'Player';
+                }
+                if(state.emote && state.emote!==remote.userData.lastEmote){ remote.userData.lastEmote=state.emote; setRemoteEmote(remote,state.emote); }
+                remote.userData.color=state.color;
+                if(remote.children[2]?.material && state.color) remote.children[2].material.color.setHex(Number(state.color));
+            }
+            for (const id of remotePlayers.keys()) if(!players[id]) removeRemotePlayer(id);
+        }
+
+        function getPlayerSnapshot() {
+            const players = {};
+            const p=controls.getObject();
+            players[localPlayerId||'host']={
+                id:localPlayerId||'host', x:p.position.x, y:p.position.y, z:p.position.z,
+                ry:camera.rotation.y, level:currentLevel, name:username, emote:localEmote, color:playerColor
+            };
+            for(const [id,conn] of connections){ if(conn._playerState) players[id]=conn._playerState; }
+            return players;
+        }
+
+        function broadcastWorld() {
+            if(!isHost) return;
+            const packet={ type:'world', items:worldItems, exitOpen, currentLevel };
+            for(const conn of connections.values()) sendTo(conn,packet);
+        }
+
+        function spawnWorldItemMesh(item) {
+            let mesh=worldItemMeshes.get(item.id);
+            const def=ITEM_TYPES.find(x=>x.id===item.type) || ITEM_TYPES[0];
+            if(!mesh){
+                mesh=new THREE.Mesh(new THREE.OctahedronGeometry(.35,1), new THREE.MeshStandardMaterial({color:def.color, emissive:def.color, emissiveIntensity:.45, roughness:.25, metalness:.2}));
+                mesh.userData.itemId=item.id; scene.add(mesh); worldItemMeshes.set(item.id,mesh);
+            }
+            mesh.position.set(item.x,.35,item.z); mesh.rotation.y += .02;
+            mesh.visible=!item.picked;
+            mesh.userData.type=item.type;
+        }
+
+        function syncWorldMeshes() {
+            for(const item of worldItems) spawnWorldItemMesh(item);
+            for(const [id,mesh] of worldItemMeshes){ if(!worldItems.some(i=>i.id===id)){ scene.remove(mesh); worldItemMeshes.delete(id); } }
+            const doorMat=exitOpen?0x52ffcc:0x305b59;
+            if(exitObject && exitObject.children[0]) exitObject.children[0].material.color.setHex(doorMat);
+        }
+
+        function nearestItem() {
+            const p=controls.getObject().position; let best=null,bd=2.2;
+            for(const item of worldItems){ if(item.picked) continue; const d=Math.hypot(p.x-item.x,p.z-item.z); if(d<bd){bd=d;best=item;} }
+            return best;
+        }
+
+        function tryInteract() {
+            if(!controls.isLocked) return;
+            const p=controls.getObject().position;
+            const item=nearestItem();
+            if(item){
+                if(inventory.length>=MAX_INVENTORY){ showToast('Inventory full. Press G to drop an item.'); return; }
+                if(isHost){
+                    item.picked=true; inventory.push(item.type); if(inventoryComplete()) exitOpen=true; syncWorldMeshes(); broadcastWorld();
+                } else if(hostConnection) sendTo(hostConnection,{type:'pickup',itemId:item.id});
+                return;
+            }
+            if(exitObject){
+                const ex=exitObject.position; const d=Math.hypot(p.x-ex.x,p.z-ex.z);
+                if(d<4.2){
+                    if(!inventoryComplete()){ showToast('The exit is locked. Find the 3 items.'); return; }
+                    if(isHost || !hostConnection){ winGame(); }
+                    else sendTo(hostConnection,{type:'escape'});
+                    return;
+                }
+            }
+            let nearestRemote=null,nd=2.4;
+            for(const remote of remotePlayers.values()){
+                const d=Math.hypot(p.x-remote.position.x,p.z-remote.position.z); if(d<nd){nd=d;nearestRemote=remote;}
+            }
+            if(nearestRemote){ showToast(`You interacted with ${nearestRemote.userData.name||'player'}!`); triggerEmote('wave'); }
+        }
+
+        function dropItem() {
+            if(!controls.isLocked || !inventory.length) return;
+            const type=inventory[inventory.length-1];
+            const p=controls.getObject().position; const forward=new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion); forward.y=0; forward.normalize();
+            const item={id:'item-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),type,x:p.x+forward.x*1.2,z:p.z+forward.z*1.2,picked:false};
+            if(isHost){ inventory.pop(); worldItems.push(item); syncWorldMeshes(); broadcastWorld(); }
+            else if(hostConnection){ sendTo(hostConnection,{type:'drop',typeId:type,x:item.x,z:item.z}); inventory.pop(); updateInventoryUI(); }
+            updateInventoryUI();
+        }
+
+        function triggerEmote(emote) {
+            localEmote=emote;
+            showToast(emote==='wave'?'👋 WAVE':emote==='point'?'👉 POINT':'😨 SCARED',900);
+            clearTimeout(emoteTimeout); emoteTimeout=setTimeout(()=>localEmote='',1200);
+            if(isHost) sendAllPlayers();
+            else if(hostConnection) sendTo(hostConnection,{type:'emote',emote});
+        }
+
+        function addChatLine(name,text) {
+            const log=document.getElementById('chat-log'); const p=document.createElement('div'); p.className='chat-line';
+            p.innerHTML=`<span class="chat-name"></span>: ${text.replace(/[&<>\"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\\"':'&quot;',"'":'&#39;'}[m]))}`;
+            p.querySelector('.chat-name').textContent=name||'Player'; log.appendChild(p); while(log.children.length>40) log.removeChild(log.firstChild); log.scrollTop=log.scrollHeight;
+        }
+
+        function toggleChat(force) {
+            const panel=document.getElementById('chat-panel'); chatOpen=force===undefined?!chatOpen:force; panel.style.display=chatOpen?'block':'none';
+            if(chatOpen){ const input=document.getElementById('chat-input'); input.focus(); }
+        }
+
+        function sendChat() {
+            const input=document.getElementById('chat-input'); const text=input.value.trim(); if(!text) return;
+            const clean=text.slice(0,120); input.value='';
+            if(isHost){ addChatLine(username,clean); for(const c of connections.values()) sendTo(c,{type:'chat',name:username,text:clean}); }
+            else if(hostConnection){ sendTo(hostConnection,{type:'chat',name:username,text:clean}); addChatLine(username,clean); }
+            else addChatLine(username,clean);
+        }
+
+        function winGame() {
+            document.getElementById('win-screen').style.display='flex'; entityActive=false; controls.unlock();
+            document.getElementById('win-text').textContent=`${username} escaped the Poolrooms.`;
+            if(isHost) { exitOpen=true; broadcastWorld(); }
+        }
+
+        function createExitDoor() {
+            exitObject=new THREE.Group(); exitObject.position.set(68,2.5,41); exitObject.name='EXIT_DOOR';
+            const door=new THREE.Mesh(new THREE.BoxGeometry(4,5,.5), new THREE.MeshStandardMaterial({color:0x305b59,emissive:0x163b37,emissiveIntensity:.5,roughness:.45}));
+            exitObject.add(door);
+            const frameMat=new THREE.MeshStandardMaterial({color:0xdde7df,roughness:.85});
+            for(const x of [-2.35,2.35]){ const f=new THREE.Mesh(new THREE.BoxGeometry(.35,5.4,.7),frameMat); f.position.x=x; exitObject.add(f); }
+            const sign=new THREE.Mesh(new THREE.BoxGeometry(2.5,.5,.18),new THREE.MeshBasicMaterial({color:0x8fffe1})); sign.position.set(0,3,.3); exitObject.add(sign);
+            scene.add(exitObject);
+        }
+
+        function initializeWorldItems() {
+            worldItems=[]; worldItemMeshes=new Map();
+            exitObject=null;
+            const points = currentLevel==='2' ? [
+                {type:'key',x:43,z:-7}, {type:'gear',x:-43,z:7}, {type:'card',x:50,z:48}
+            ] : [
+                {type:'key',x:10,z:-8}, {type:'gear',x:-10,z:8}, {type:'card',x:18,z:18}
+            ];
+            worldItems=points.map((p,i)=>({...p,id:'item-fixed-'+i,picked:false}));
+            if(currentLevel==='2') createExitDoor();
+            syncWorldMeshes(); updateInventoryUI();
+        }
+
+        // Host/guest network additions. These wrap the earlier handlers cleanly.
+        const __oldCreatePeerForHost = createPeerForHost;
+        const __oldConnectAsGuest = connectAsGuest;
+        const __oldSetupHostConnection = setupHostConnection;
+        const __oldSetupGuestConnection = setupGuestConnection;
+
+        createPeerForHost = function(){
+            __oldCreatePeerForHost();
+        };
+
+        connectAsGuest = function(code){ __oldConnectAsGuest(code); };
+
+        setupHostConnection = function(conn){
+            __oldSetupHostConnection(conn);
+            const originalOnData = conn.on;
+        };
+
+        // Rebuild networking setup with item/chat/emote messages.
+        function setupEnhancedHostConnection(conn){
+            conn.on('open',()=>{
+                connections.set(conn.peer,conn);
+                conn._playerState={id:conn.peer,x:0,y:1.6,z:0,ry:0,level:currentLevel,name:'Player',color:makePlayerColor('Player'),emote:''};
+                sendTo(conn,{type:'welcome',id:conn.peer,level:currentLevel,players:getPlayerSnapshot(),world:worldItems,exitOpen});
+                sendAllPlayers();
+                setNetworkStatus('HOST • PLAYERS: '+(connections.size+1));
+            });
+            conn.on('data',data=>{
+                if(!data||!data.type) return;
+                if(data.type==='position'){
+                    conn._playerState={id:conn.peer,x:Number(data.x)||0,y:Number(data.y)||1.6,z:Number(data.z)||0,ry:Number(data.ry)||0,level:currentLevel,name:String(data.name||'Player').slice(0,16),color:Number(data.color)||makePlayerColor(String(data.name||'Player')),emote:String(data.emote||'').slice(0,12)};
+                    sendAllPlayers();
+                } else if(data.type==='level'){
+                    currentLevel=String(data.level||currentLevel); buildLevel(currentLevel); initializeWorldItems(); sendAllPlayers(); broadcastWorld();
+                } else if(data.type==='pickup'){
+                    const item=worldItems.find(i=>i.id===data.itemId&&!i.picked); if(item){ item.picked=true; sendTo(conn,{type:'grant',itemType:item.type}); syncWorldMeshes(); broadcastWorld(); }
+                } else if(data.type==='drop'){
+                    const valid=ITEM_TYPES.some(i=>i.id===data.typeId); if(valid){ worldItems.push({id:'item-'+Date.now()+'-'+Math.random().toString(36).slice(2),type:data.typeId,x:Number(data.x)||0,z:Number(data.z)||0,picked:false}); syncWorldMeshes(); broadcastWorld(); }
+                } else if(data.type==='chat'){
+                    const text=String(data.text||'').slice(0,120); const name=String(data.name||'Player').slice(0,16); addChatLine(name,text); for(const c of connections.values()) sendTo(c,{type:'chat',name,text});
+                } else if(data.type==='emote'){
+                    if(conn._playerState) conn._playerState.emote=String(data.emote||'').slice(0,12); sendAllPlayers();
+                } else if(data.type==='escape'){
+                    const state=conn._playerState; if(state){ /* Guest must have inventory locally; host trusts near-door request after distance check. */ const p={x:state.x,z:state.z}; const ex=exitObject?.position; if(ex&&Math.hypot(p.x-ex.x,p.z-ex.z)<4.5) sendTo(conn,{type:'win'}); }
+                }
+            });
+            conn.on('close',()=>{ connections.delete(conn.peer); removeRemotePlayer(conn.peer); sendAllPlayers(); setNetworkStatus('HOST • PLAYERS: '+(connections.size+1)); });
+        }
+
+        function setupEnhancedGuestConnection(conn){
+            conn.on('open',()=>{ setNetworkStatus('CONNECTED TO HOST'); sendTo(conn,{type:'join',level:currentLevel,name:username,color:playerColor}); });
+            conn.on('data',data=>{
+                if(!data||!data.type) return;
+                if(data.type==='welcome'){
+                    currentLevel=String(data.level||currentLevel); buildLevel(currentLevel); camera.position.set(0,1.6,0); worldItems=Array.isArray(data.world)?data.world:[]; exitOpen=!!data.exitOpen; initializeWorldItems(); worldItems=Array.isArray(data.world)?data.world:worldItems; syncWorldMeshes(); renderRemotePlayers(data.players||{}); setNetworkStatus('CONNECTED • ROOM '+roomId.replace('backrooms-','').toUpperCase());
+                } else if(data.type==='players'){ renderRemotePlayers(data.players||{}); }
+                else if(data.type==='world'){ currentLevel=String(data.currentLevel||currentLevel); worldItems=Array.isArray(data.items)?data.items:[]; exitOpen=!!data.exitOpen; syncWorldMeshes(); }
+                else if(data.type==='grant'){ if(inventory.length<MAX_INVENTORY) inventory.push(String(data.itemType)); if(inventoryComplete()) exitOpen=true; updateInventoryUI(); syncWorldMeshes(); }
+                else if(data.type==='chat'){ addChatLine(data.name,data.text); }
+                else if(data.type==='win'){ winGame(); }
+                else if(data.type==='level'){ currentLevel=String(data.level||'0'); buildLevel(currentLevel); initializeWorldItems(); }
+            });
+            conn.on('close',()=>{ setNetworkStatus('HOST DISCONNECTED'); clearRemotePlayers(); showToast('Host disconnected.'); });
+        }
+
+        // Replace networking functions with enhanced versions.
+        createPeerForHost = function(){
+            const id='backrooms-'+randomRoomCode(8).toLowerCase(); peer=new Peer(id);
+            peer.on('open',id=>{ isHost=true; localPlayerId=id; roomId=id; setNetworkStatus('HOST • ROOM: '+id.replace('backrooms-','').toUpperCase()); document.getElementById('room-code').value=id.replace('backrooms-','').toUpperCase(); });
+            peer.on('connection',conn=>setupEnhancedHostConnection(conn));
+            peer.on('error',err=>{ console.error(err); setNetworkStatus('NETWORK ERROR'); showToast('Multiplayer connection error.'); });
+        };
+        connectAsGuest = function(code){
+            const cleaned=code.trim().toLowerCase().replace(/^backrooms-/,''); if(!cleaned){showToast('Enter a room code first.');return;}
+            peer=new Peer(); peer.on('open',id=>{ localPlayerId=id; roomId='backrooms-'+cleaned; hostConnection=peer.connect(roomId,{reliable:true}); setupEnhancedGuestConnection(hostConnection); });
+            peer.on('error',err=>{ console.error(err); setNetworkStatus('NETWORK ERROR'); showToast('Could not join that room.'); });
+        };
+
+        // Enhanced player start and loop helpers.
+        startGame = function(mode){
+            setUsername(); playerColor=makePlayerColor(username); inventory=[]; updateInventoryUI(); localEmote='';
+            currentLevel=document.getElementById('level-select').value; buildLevel(currentLevel); camera.position.set(0,1.6,0); stamina=MAX_STAMINA; updateStamina(0); document.getElementById('hud').style.display='block'; document.getElementById('chat-panel').style.display='none';
+            initializeWorldItems(); entityActive=true;
+            if(mode==='host') createPeerForHost(); else if(mode==='guest') connectAsGuest(document.getElementById('room-code').value); else setNetworkStatus('SOLO');
+            controls.lock();
+        };
+
+        const __oldAnimate = animate;
+        animate = function(){ __oldAnimate(); };
+
+        function enhancedInitHooks(){
+            loadUsername(); updateInventoryUI();
+            document.getElementById('chat-send').addEventListener('click',sendChat);
+            document.getElementById('chat-input').addEventListener('keydown',e=>{ if(e.key==='Enter'){e.preventDefault();sendChat();} });
+            document.getElementById('emote-menu-btn').addEventListener('click',()=>toggleChat(false)|| (document.getElementById('emote-panel').style.display='flex'));
+            document.querySelectorAll('#emote-panel button[data-emote]').forEach(b=>b.addEventListener('click',()=>{triggerEmote(b.dataset.emote);document.getElementById('emote-panel').style.display='none';}));
+            document.getElementById('mobile-action').addEventListener('pointerdown',tryInteract);
+            document.getElementById('mobile-sprint').addEventListener('pointerdown',()=>isSprinting=stamina>0);
+            document.getElementById('mobile-sprint').addEventListener('pointerup',()=>isSprinting=false);
+            document.getElementById('mobile-emote').addEventListener('pointerdown',()=>{const p=document.getElementById('emote-panel');p.style.display=p.style.display==='flex'?'none':'flex';});
+            document.getElementById('mobile-chat').addEventListener('pointerdown',()=>toggleChat());
+            document.getElementById('win-close').addEventListener('click',()=>{document.getElementById('win-screen').style.display='none';document.getElementById('start-screen').style.display='flex';});
+
+            document.addEventListener('keydown',e=>{
+                if(e.code==='KeyE'){e.preventDefault();tryInteract();}
+                if(e.code==='KeyG'){e.preventDefault();dropItem();}
+                if(e.code==='KeyT'){e.preventDefault();toggleChat(true);}
+                if(e.code==='KeyB'){e.preventDefault();const p=document.getElementById('emote-panel');p.style.display=p.style.display==='flex'?'none':'flex';}
+                if(e.code==='Escape'){ document.getElementById('emote-panel').style.display='none'; }
+            });
+
+            // Touch camera look on the rest of the screen.
+            const look=document.getElementById('mobile-look'); let lookId=null, lastX=0, lastY=0;
+            look.addEventListener('pointerdown',e=>{ lookId=e.pointerId; lastX=e.clientX; lastY=e.clientY; look.setPointerCapture(e.pointerId); });
+            look.addEventListener('pointermove',e=>{ if(e.pointerId!==lookId || !controls.isLocked) return; const dx=e.clientX-lastX, dy=e.clientY-lastY; lastX=e.clientX; lastY=e.clientY; camera.rotation.y -= dx*0.004; camera.rotation.x -= dy*0.004; camera.rotation.x=Math.max(-Math.PI/2,Math.min(Math.PI/2,camera.rotation.x)); });
+            look.addEventListener('pointerup',e=>{ if(e.pointerId===lookId) lookId=null; });
+            look.addEventListener('pointercancel',e=>{ if(e.pointerId===lookId) lookId=null; });
+
+            // Virtual joystick.
+            const zone=document.getElementById('joystick-zone'), stick=document.getElementById('joystick-stick'); let active=false,oid=null;
+            const updateJoy=(ev)=>{ const r=zone.getBoundingClientRect(); const cx=r.left+75, cy=r.bottom-75; let dx=ev.clientX-cx, dy=ev.clientY-cy; const max=55; const len=Math.hypot(dx,dy); if(len>max){dx=dx/len*max;dy=dy/len*max;} stick.style.transform=`translate(${dx}px,${dy}px)`; joystickX=dx/max; joystickZ=dy/max; moveForward=joystickZ<-.18; moveBackward=joystickZ>.18; moveLeft=joystickX<-.18; moveRight=joystickX>.18; };
+            zone.addEventListener('pointerdown',e=>{active=true;oid=e.pointerId;zone.setPointerCapture(oid);updateJoy(e);});
+            zone.addEventListener('pointermove',e=>{if(active&&e.pointerId===oid)updateJoy(e);});
+            const endJoy=()=>{active=false;joystickX=joystickZ=0;moveForward=moveBackward=moveLeft=moveRight=false;stick.style.transform='translate(0,0)';};
+            zone.addEventListener('pointerup',endJoy); zone.addEventListener('pointercancel',endJoy);
+        }
+
+        // Patch original init by calling hooks once DOM is ready (after original init listeners are attached).
+        if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',enhancedInitHooks); else enhancedInitHooks();
+
     </script>
 </body>
 </html>
