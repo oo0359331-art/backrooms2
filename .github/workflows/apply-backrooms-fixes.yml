@@ -29,6 +29,7 @@ jobs:
           node --check level_remodel_pack.js
           node --check level_architecture_remodel.js
           node --check level_menu_hotfix.js
+          node --check stability_hotfix.js
       - name: Ensure gameplay, UI and SEO enhancements are loaded
         shell: python
         run: |
@@ -58,7 +59,8 @@ jobs:
               '    <script src="./level0_remodel.js"></script>',
               '    <script src="./level_remodel_pack.js"></script>',
               '    <script src="./level_architecture_remodel.js"></script>',
-              '    <script src="./level_menu_hotfix.js"></script>'
+              '    <script src="./level_menu_hotfix.js"></script>',
+              '    <script src="./stability_hotfix.js"></script>'
           ]
           insert = '\n'.join(t for t in tags if t not in s)
           if insert:
@@ -86,5 +88,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
-          git diff --cached --quiet || git commit -m 'Load full level menu hotfix'
+          git diff --cached --quiet || git commit -m 'Load stability and level selection hotfix'
           git push
