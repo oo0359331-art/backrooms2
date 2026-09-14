@@ -19,6 +19,8 @@
 
   const q = id => document.getElementById(id);
   const safe = fn => { try { return fn(); } catch(e) {} };
+  const getCamera = () => safe(()=>typeof camera !== 'undefined' ? camera : window.camera);
+  const getControls = () => safe(()=>typeof controls !== 'undefined' ? controls : window.controls);
 
   function style(){
     const s=document.createElement('style'); s.id='rm-gp-style'; s.textContent=`
@@ -55,16 +57,17 @@
   }
 
   function ensureLight(){
-    if(S.flashlight || !window.THREE || !window.camera) return;
+    const cam=getCamera();
+    if(S.flashlight || !window.THREE || !cam) return;
     safe(()=>{
       S.flashlight=new THREE.SpotLight(0xfff4dd,2.4,32,Math.PI/6,.7,1.25);
       S.flashlight.position.set(0,.04,.1);
-      window.camera.add(S.flashlight);
+      cam.add(S.flashlight);
       S.flashlight.target.position.set(0,0,-8);
-      window.camera.add(S.flashlight.target);
+      cam.add(S.flashlight.target);
       S.flashlightGlow=new THREE.PointLight(0xffefcc,.08,4);
       S.flashlightGlow.position.set(0,.02,.1);
-      window.camera.add(S.flashlightGlow);
+      cam.add(S.flashlightGlow);
     });
   }
 
@@ -118,8 +121,9 @@
 
   function updateMovement(dt){
     try{
-      if(!window.camera || !S.targetCameraY) return;
-      const p=window.camera.position;
+      const cam=getCamera();
+      if(!cam || !S.targetCameraY) return;
+      const p=cam.position;
       p.y += (S.targetCameraY-p.y)*Math.min(1,dt*8);
       if(typeof isSprinting!=='undefined' && isSprinting && !S.crouch){
         S.sprintDrainTimer += dt;
@@ -132,8 +136,9 @@
     const edge=q('rm-danger-edge'); if(!edge) return;
     let danger=0;
     try{
-      if(typeof entity!=='undefined' && entity && window.controls){
-        const p=window.controls.getObject().position;
+      const ctl=getControls();
+      if(typeof entity!=='undefined' && entity && ctl){
+        const p=ctl.getObject().position;
         if(entity.position) danger=Math.max(0,1-p.distanceTo(entity.position)/24);
       }
     }catch(e){}
@@ -152,7 +157,7 @@
 
   function loop(){
     const now=performance.now();
-    const dt=Math.min(.05,(now-(S.lastLevel===null?now:loop.last))/1000)||0;
+    const dt=Math.min(.05,(now-(loop.last||now))/1000)||0;
     loop.last=now;
     let active=false; safe(()=>{ active=typeof gameActive!=='undefined'&&gameActive; });
     if(active){
@@ -175,7 +180,7 @@
   function init(){
     if(S.initialized) return; S.initialized=true;
     style(); dom(); keys();
-    setTimeout(()=>{ safe(()=>{ S.originalCameraY=window.camera?.position?.y||1.65; S.targetCameraY=S.originalCameraY; }); },1200);
+    setTimeout(()=>{ safe(()=>{ const cam=getCamera(); S.originalCameraY=cam?.position?.y||1.65; S.targetCameraY=S.originalCameraY; }); },1200);
     loop();
   }
 
