@@ -3,120 +3,169 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Backrooms - Hub & Poolrooms</title>
+    <title>The Backrooms - Multiplayer</title>
     <style>
+        * { box-sizing: border-box; }
         body {
             margin: 0;
             overflow: hidden;
-            background-color: #000;
+            background: #000;
             font-family: 'Courier New', Courier, monospace;
         }
         #start-screen {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.95);
+            inset: 0;
+            background: radial-gradient(circle at center, rgba(30,30,30,.75), rgba(0,0,0,.97));
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             z-index: 100;
             color: #d4af37;
+            text-align: center;
         }
         #start-screen h1 {
-            font-size: 3.5rem;
-            margin-bottom: 5px;
+            font-size: clamp(2.2rem, 6vw, 3.5rem);
+            margin: 0 0 5px;
             text-shadow: 0 0 15px #ffcc00;
             letter-spacing: 3px;
         }
-        #start-screen p {
-            color: #888;
-            margin-bottom: 25px;
-        }
+        #start-screen p { color: #aaa; margin: 0 0 20px; }
         .menu-container {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 15px;
+            gap: 12px;
+            width: min(92vw, 460px);
         }
-        select, #start-btn {
-            padding: 14px 28px;
-            font-size: 1.2rem;
-            border-radius: 4px;
-            cursor: pointer;
+        select, input, button {
+            width: 100%;
+            padding: 12px 16px;
+            font-size: 1rem;
+            border-radius: 5px;
             border: 2px solid #d4af37;
             font-family: 'Courier New', Courier, monospace;
         }
-        select {
-            background-color: #111;
-            color: #d4af37;
+        select, input {
+            background: #111;
+            color: #eee;
         }
-        #start-btn {
-            background-color: #d4af37;
+        button {
+            cursor: pointer;
+            background: #d4af37;
             color: #000;
             font-weight: bold;
-            transition: 0.2s;
+            transition: .2s;
         }
-        #start-btn:hover {
-            background-color: #fff;
-            box-shadow: 0 0 15px #d4af37;
+        button:hover { background: #fff; box-shadow: 0 0 15px #d4af37; }
+        button.secondary { background: #111; color: #d4af37; }
+        button.secondary:hover { background: #222; }
+        .row { display: flex; gap: 10px; width: 100%; }
+        .row > * { flex: 1; }
+        #room-info {
+            min-height: 24px;
+            color: #7fffd4;
+            font-size: .95rem;
+            line-height: 1.4;
         }
         #jumpscare {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(150, 0, 0, 0.9);
+            inset: 0;
+            background: rgba(150,0,0,.92);
             display: none;
             justify-content: center;
             align-items: center;
             z-index: 200;
             color: white;
-            font-size: 5rem;
+            font-size: clamp(3rem, 10vw, 5rem);
             font-weight: bold;
             text-shadow: 0 0 20px #000;
         }
         #instructions {
             position: absolute;
-            bottom: 20px;
+            bottom: 18px;
             width: 100%;
             text-align: center;
-            color: #ccc;
-            font-size: 1rem;
+            color: #ddd;
+            font-size: .95rem;
             pointer-events: none;
             text-shadow: 2px 2px 2px #000;
+            z-index: 10;
+        }
+        #hud {
+            position: absolute;
+            left: 18px;
+            bottom: 18px;
+            z-index: 20;
+            width: 260px;
+            pointer-events: none;
+            color: #fff;
+            text-shadow: 2px 2px 2px #000;
+            display: none;
+        }
+        #stamina-label {
+            font-size: 13px;
+            margin-bottom: 5px;
+            letter-spacing: 1px;
+        }
+        #stamina-bar {
+            width: 100%;
+            height: 16px;
+            border: 2px solid #fff;
+            background: rgba(0,0,0,.55);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        #stamina-fill {
+            width: 100%;
+            height: 100%;
+            background: #55e673;
+            transition: width .06s linear;
+        }
+        #network-status {
+            margin-top: 8px;
+            font-size: 12px;
+            color: #9be7ff;
         }
     </style>
 </head>
 <body>
-
-    <!-- Jumpscare Screen -->
     <div id="jumpscare">YOU DIED</div>
 
-    <!-- Start Screen & Level Selector -->
     <div id="start-screen">
         <h1>THE BACKROOMS</h1>
-        <p>Explore the depths. Hold SHIFT to sprint.</p>
+        <p>Explore alone or with friends.</p>
+
         <div class="menu-container">
             <label for="level-select" style="color:#d4af37;">CHOOSE YOUR LEVEL:</label>
             <select id="level-select">
                 <option value="0">Level 0: Endless Yellow Labyrinth</option>
                 <option value="1">Level 1: The Dark Concrete Warehouse</option>
-                <option value="2">Level 37: The Poolrooms (Calm & Tiled)</option>
+                <option value="2">Level 37: The Poolrooms</option>
             </select>
-            <button id="start-btn">ENTER THE BACKROOMS</button>
+
+            <div class="row">
+                <button id="host-btn">CREATE ROOM</button>
+                <button id="join-btn" class="secondary">JOIN ROOM</button>
+            </div>
+
+            <input id="room-code" maxlength="12" placeholder="Room code (for joining)">
+            <button id="solo-btn" class="secondary">PLAY SOLO</button>
+            <div id="room-info">Create a room to play multiplayer, then send the room code to your friend.</div>
         </div>
+    </div>
+
+    <div id="hud">
+        <div id="stamina-label">STAMINA</div>
+        <div id="stamina-bar"><div id="stamina-fill"></div></div>
+        <div id="network-status">OFFLINE</div>
     </div>
 
     <div id="instructions">WASD to Move | HOLD SHIFT to Sprint | Mouse to Look | ESC to Pause</div>
 
-    <!-- Three.js & PointerLockControls -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/PointerLockControls.js"></script>
-
+    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script>
         let scene, camera, renderer, controls;
         let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false, isSprinting = false;
@@ -124,25 +173,313 @@
         const velocity = new THREE.Vector3();
         const direction = new THREE.Vector3();
         const walls = [];
-        
+
         let entity;
         let entityActive = false;
-        let currentLevel = "0";
+        let currentLevel = '0';
 
-        // Procedural Textures Generator
+        // ----------------------------
+        // STAMINA
+        // ----------------------------
+        const MAX_STAMINA = 100;
+        let stamina = MAX_STAMINA;
+        const SPRINT_DRAIN = 30;      // per second
+        const STAMINA_REGEN = 18;     // per second
+        const MIN_SPRINT_STAMINA = 1;
+        const staminaFill = document.getElementById('stamina-fill');
+
+        function updateStamina(delta) {
+            const moving = moveForward || moveBackward || moveLeft || moveRight;
+
+            if (isSprinting && moving && stamina > 0) {
+                stamina -= SPRINT_DRAIN * delta;
+                if (stamina <= MIN_SPRINT_STAMINA) {
+                    stamina = 0;
+                    isSprinting = false;
+                }
+            } else {
+                stamina += STAMINA_REGEN * delta;
+            }
+
+            stamina = Math.max(0, Math.min(MAX_STAMINA, stamina));
+            staminaFill.style.width = stamina + '%';
+            staminaFill.style.background = stamina <= 25 ? '#ff4545' : (stamina <= 50 ? '#ffd34d' : '#55e673');
+        }
+
+        // ----------------------------
+        // MULTIPLAYER (PeerJS)
+        // ----------------------------
+        let peer = null;
+        let isHost = false;
+        let roomId = null;
+        let hostConnection = null;
+        const connections = new Map();
+        const remotePlayers = new Map();
+        let localPlayerId = null;
+        let networkTimer = 0;
+        const NETWORK_RATE = 1 / 20;
+
+        function randomRoomCode(length = 6) {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            let code = '';
+            for (let i = 0; i < length; i++) code += chars[Math.floor(Math.random() * chars.length)];
+            return code;
+        }
+
+        function createPeerForHost() {
+            const id = 'backrooms-' + randomRoomCode(8).toLowerCase();
+            peer = new Peer(id);
+            peer.on('open', id => {
+                isHost = true;
+                localPlayerId = id;
+                roomId = id;
+                hostConnection = null;
+                setNetworkStatus('HOST • ROOM: ' + id.replace('backrooms-', '').toUpperCase());
+                document.getElementById('room-code').value = id.replace('backrooms-', '').toUpperCase();
+            });
+            peer.on('connection', conn => {
+                setupHostConnection(conn);
+            });
+            peer.on('error', err => {
+                console.error('PeerJS host error:', err);
+                setNetworkStatus('NETWORK ERROR');
+                alert('Multiplayer connection error. Try creating a new room.');
+            });
+        }
+
+        function connectAsGuest(code) {
+            const cleaned = code.trim().toLowerCase().replace(/^backrooms-/, '');
+            if (!cleaned) {
+                alert('Enter a room code first.');
+                return;
+            }
+
+            peer = new Peer();
+            peer.on('open', id => {
+                localPlayerId = id;
+                roomId = 'backrooms-' + cleaned;
+                hostConnection = peer.connect(roomId, { reliable: true });
+                setupGuestConnection(hostConnection);
+            });
+            peer.on('error', err => {
+                console.error('PeerJS guest error:', err);
+                setNetworkStatus('NETWORK ERROR');
+                alert('Could not join that room. Check the code and make sure the host is still in the game.');
+            });
+        }
+
+        function setupHostConnection(conn) {
+            conn.on('open', () => {
+                connections.set(conn.peer, conn);
+                sendTo(conn, {
+                    type: 'welcome',
+                    id: conn.peer,
+                    level: currentLevel,
+                    players: getPlayerSnapshot()
+                });
+                sendAllPlayers();
+                setNetworkStatus('HOST • PLAYERS: ' + (connections.size + 1));
+            });
+
+            conn.on('data', data => {
+                if (!data || !data.type) return;
+
+                if (data.type === 'join') {
+                    if (data.level && data.level !== currentLevel) {
+                        sendTo(conn, { type: 'level', level: currentLevel });
+                    }
+                    sendAllPlayers();
+                }
+
+                if (data.type === 'position') {
+                    conn._playerState = {
+                        id: conn.peer,
+                        x: Number(data.x) || 0,
+                        y: Number(data.y) || 1.6,
+                        z: Number(data.z) || 0,
+                        ry: Number(data.ry) || 0,
+                        level: currentLevel
+                    };
+                    sendAllPlayers();
+                }
+
+                if (data.type === 'level') {
+                    currentLevel = String(data.level || '0');
+                    buildLevel(currentLevel);
+                    camera.position.set(currentLevel === '2' ? 0 : 0, 1.6, 0);
+                    sendAllPlayers();
+                }
+            });
+
+            conn.on('close', () => {
+                connections.delete(conn.peer);
+                removeRemotePlayer(conn.peer);
+                sendAllPlayers();
+                setNetworkStatus('HOST • PLAYERS: ' + (connections.size + 1));
+            });
+        }
+
+        function setupGuestConnection(conn) {
+            conn.on('open', () => {
+                setNetworkStatus('CONNECTED TO HOST');
+                sendTo(conn, { type: 'join', level: currentLevel });
+            });
+
+            conn.on('data', data => {
+                if (!data || !data.type) return;
+
+                if (data.type === 'welcome') {
+                    currentLevel = String(data.level || currentLevel);
+                    buildLevel(currentLevel);
+                    camera.position.set(currentLevel === '2' ? 0 : 0, 1.6, 0);
+                    renderRemotePlayers(data.players || {});
+                    setNetworkStatus('CONNECTED • ROOM ' + roomId.replace('backrooms-', '').toUpperCase());
+                }
+
+                if (data.type === 'players') {
+                    renderRemotePlayers(data.players || {});
+                }
+
+                if (data.type === 'level') {
+                    currentLevel = String(data.level || '0');
+                    buildLevel(currentLevel);
+                    camera.position.set(currentLevel === '2' ? 0 : 0, 1.6, 0);
+                }
+            });
+
+            conn.on('close', () => {
+                setNetworkStatus('HOST DISCONNECTED');
+                clearRemotePlayers();
+                alert('The host left the room.');
+            });
+        }
+
+        function sendTo(conn, data) {
+            if (conn && conn.open) conn.send(data);
+        }
+
+        function getPlayerSnapshot() {
+            const players = {};
+            players[localPlayerId || 'host'] = {
+                id: localPlayerId || 'host',
+                x: controls.getObject().position.x,
+                y: controls.getObject().position.y,
+                z: controls.getObject().position.z,
+                ry: camera.rotation.y,
+                level: currentLevel
+            };
+
+            for (const [id, conn] of connections) {
+                if (conn._playerState) players[id] = conn._playerState;
+            }
+            return players;
+        }
+
+        function sendAllPlayers() {
+            if (!isHost) return;
+            const packet = { type: 'players', players: getPlayerSnapshot() };
+            for (const conn of connections.values()) sendTo(conn, packet);
+        }
+
+        function createRemotePlayer() {
+            const group = new THREE.Group();
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0x4e7bd9, roughness: 0.9 });
+            const headMat = new THREE.MeshStandardMaterial({ color: 0xf0c7a4, roughness: 1 });
+
+            const body = new THREE.Mesh(new THREE.CylinderGeometry(.3, .42, 1.2, 10), bodyMat);
+            body.position.y = .8;
+            group.add(body);
+
+            const head = new THREE.Mesh(new THREE.SphereGeometry(.3, 12, 12), headMat);
+            head.position.y = 1.7;
+            group.add(head);
+
+            group.userData.target = new THREE.Vector3();
+            group.userData.targetYaw = 0;
+            return group;
+        }
+
+        function renderRemotePlayers(players) {
+            for (const [id, state] of Object.entries(players)) {
+                if (id === localPlayerId) continue;
+                if (state.level && String(state.level) !== String(currentLevel)) {
+                    removeRemotePlayer(id);
+                    continue;
+                }
+
+                let remote = remotePlayers.get(id);
+                if (!remote) {
+                    remote = createRemotePlayer();
+                    scene.add(remote);
+                    remotePlayers.set(id, remote);
+                }
+
+                remote.userData.target.set(state.x || 0, Math.max(0, (state.y || 1.6) - 1.6), state.z || 0);
+                remote.userData.targetYaw = state.ry || 0;
+            }
+
+            for (const id of remotePlayers.keys()) {
+                if (!players[id]) removeRemotePlayer(id);
+            }
+        }
+
+        function updateRemotePlayers(delta) {
+            for (const remote of remotePlayers.values()) {
+                remote.position.lerp(remote.userData.target, Math.min(1, delta * 12));
+                remote.rotation.y += (remote.userData.targetYaw - remote.rotation.y) * Math.min(1, delta * 12);
+            }
+        }
+
+        function removeRemotePlayer(id) {
+            const remote = remotePlayers.get(id);
+            if (!remote) return;
+            scene.remove(remote);
+            remotePlayers.delete(id);
+        }
+
+        function clearRemotePlayers() {
+            for (const id of Array.from(remotePlayers.keys())) removeRemotePlayer(id);
+        }
+
+        function setNetworkStatus(text) {
+            document.getElementById('network-status').textContent = text;
+        }
+
+        function startGame(mode) {
+            currentLevel = document.getElementById('level-select').value;
+            buildLevel(currentLevel);
+            camera.position.set(currentLevel === '2' ? 0 : 0, 1.6, 0);
+            stamina = MAX_STAMINA;
+            document.getElementById('stamina-fill').style.width = '100%';
+            document.getElementById('hud').style.display = 'block';
+            entityActive = true;
+
+            if (mode === 'host') {
+                createPeerForHost();
+            } else if (mode === 'guest') {
+                connectAsGuest(document.getElementById('room-code').value);
+            } else {
+                setNetworkStatus('SOLO');
+            }
+
+            controls.lock();
+        }
+
+        // ----------------------------
+        // TEXTURES
+        // ----------------------------
         function createWallTexture(colorHex, patternColorHex) {
             const canvas = document.createElement('canvas');
-            canvas.width = 256; canvas.height = 256;
+            canvas.width = 256;
+            canvas.height = 256;
             const ctx = canvas.getContext('2d');
             ctx.fillStyle = colorHex;
             ctx.fillRect(0, 0, 256, 256);
             ctx.fillStyle = patternColorHex;
-            for(let i=0; i<5000; i++) {
-                ctx.fillRect(Math.random()*256, Math.random()*256, 2, 2);
-            }
+            for (let i = 0; i < 3000; i++) ctx.fillRect(Math.random() * 256, Math.random() * 256, 2, 2);
             ctx.strokeStyle = patternColorHex;
             ctx.lineWidth = 4;
-            for(let x=0; x<256; x+=32) {
+            for (let x = 0; x < 256; x += 32) {
                 ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 256); ctx.stroke();
             }
             const texture = new THREE.CanvasTexture(canvas);
@@ -154,14 +491,13 @@
 
         function createFloorTexture(colorHex) {
             const canvas = document.createElement('canvas');
-            canvas.width = 256; canvas.height = 256;
+            canvas.width = 256;
+            canvas.height = 256;
             const ctx = canvas.getContext('2d');
             ctx.fillStyle = colorHex;
             ctx.fillRect(0, 0, 256, 256);
-            ctx.fillStyle = "#00000033";
-            for(let i=0; i<800; i++) {
-                ctx.fillRect(Math.random()*256, Math.random()*256, 6, 6);
-            }
+            ctx.fillStyle = '#00000033';
+            for (let i = 0; i < 800; i++) ctx.fillRect(Math.random() * 256, Math.random() * 256, 6, 6);
             const texture = new THREE.CanvasTexture(canvas);
             texture.wrapS = THREE.RepeatWrapping;
             texture.wrapT = THREE.RepeatWrapping;
@@ -171,16 +507,17 @@
 
         function createPoolTileTexture() {
             const canvas = document.createElement('canvas');
-            canvas.width = 256; canvas.height = 256;
+            canvas.width = 256;
+            canvas.height = 256;
             const ctx = canvas.getContext('2d');
-            ctx.fillStyle = "#e0f7fa"; // Pool tile blue-white
+            ctx.fillStyle = '#f4f6f2';
             ctx.fillRect(0, 0, 256, 256);
-            ctx.strokeStyle = "#b2ebf2";
+            ctx.strokeStyle = '#a9c7bf';
             ctx.lineWidth = 3;
-            for(let x=0; x<=256; x+=32) {
+            for (let x = 0; x <= 256; x += 32) {
                 ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 256); ctx.stroke();
             }
-            for(let y=0; y<=256; y+=32) {
+            for (let y = 0; y <= 256; y += 32) {
                 ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(256, y); ctx.stroke();
             }
             const texture = new THREE.CanvasTexture(canvas);
@@ -190,31 +527,51 @@
             return texture;
         }
 
+        function createWaterTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#2ea9a0';
+            ctx.fillRect(0, 0, 256, 256);
+            ctx.strokeStyle = 'rgba(255,255,255,.22)';
+            ctx.lineWidth = 2;
+            for (let y = 8; y < 256; y += 28) {
+                ctx.beginPath();
+                for (let x = 0; x <= 256; x += 16) {
+                    const yy = y + Math.sin(x * 0.1 + y) * 3;
+                    if (x === 0) ctx.moveTo(x, yy); else ctx.lineTo(x, yy);
+                }
+                ctx.stroke();
+            }
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.wrapT = THREE.RepeatWrapping;
+            texture.repeat.set(3, 3);
+            return texture;
+        }
+
         init();
         animate();
 
         function init() {
             scene = new THREE.Scene();
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(0, 1.6, 0);
+            camera.position.set(currentLevel === '2' ? 0 : 0, 1.6, 0);
 
             renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
             renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.outputEncoding = THREE.sRGBEncoding;
             document.body.appendChild(renderer.domElement);
 
             controls = new THREE.PointerLockControls(camera, document.body);
+            scene.add(controls.getObject());
 
             const startScreen = document.getElementById('start-screen');
-            const startBtn = document.getElementById('start-btn');
-            const levelSelect = document.getElementById('level-select');
-
-            buildLevel("0");
-
-            startBtn.addEventListener('click', () => {
-                currentLevel = levelSelect.value;
-                buildLevel(currentLevel);
-                controls.lock();
-            });
+            document.getElementById('host-btn').addEventListener('click', () => startGame('host'));
+            document.getElementById('join-btn').addEventListener('click', () => startGame('guest'));
+            document.getElementById('solo-btn').addEventListener('click', () => startGame('solo'));
 
             controls.addEventListener('lock', () => {
                 startScreen.style.display = 'none';
@@ -226,18 +583,17 @@
                 entityActive = false;
             });
 
-            scene.add(controls.getObject());
-
-            // Controls listeners with Shift to Sprint
-            document.addEventListener('keydown', (e) => {
+            document.addEventListener('keydown', e => {
                 if (e.code === 'KeyW') moveForward = true;
                 if (e.code === 'KeyA') moveLeft = true;
                 if (e.code === 'KeyS') moveBackward = true;
                 if (e.code === 'KeyD') moveRight = true;
-                if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') isSprinting = true;
+                if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
+                    if (stamina > 0) isSprinting = true;
+                }
             });
 
-            document.addEventListener('keyup', (e) => {
+            document.addEventListener('keyup', e => {
                 if (e.code === 'KeyW') moveForward = false;
                 if (e.code === 'KeyA') moveLeft = false;
                 if (e.code === 'KeyS') moveBackward = false;
@@ -252,42 +608,149 @@
             });
         }
 
-        function buildLevel(levelId) {
+        function clearLevelObjects() {
             walls.length = 0;
-            scene.children.forEach(child => {
-                if (child !== camera && child !== controls.getObject() && child.type !== 'AmbientLight' && child.type !== 'PointLight') {
-                    scene.remove(child);
-                }
-            });
+            entity = null;
+            clearRemotePlayers();
+
+            const keep = new Set([controls.getObject(), camera]);
+            for (const child of [...scene.children]) {
+                if (!keep.has(child)) scene.remove(child);
+            }
+        }
+
+        function addWall(x, z, w, d, h, wallMat) {
+            const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMat);
+            mesh.position.set(x, h / 2, z);
+            scene.add(mesh);
+            walls.push(new THREE.Box3().setFromObject(mesh));
+            return mesh;
+        }
+
+        function addCeilingLight(x, y, z) {
+            const fixture = new THREE.Mesh(
+                new THREE.BoxGeometry(3.2, .08, .8),
+                new THREE.MeshBasicMaterial({ color: 0xffffff })
+            );
+            fixture.position.set(x, y, z);
+            scene.add(fixture);
+
+            const light = new THREE.PointLight(0xffffff, 1.2, 24);
+            light.position.set(x, y - .15, z);
+            scene.add(light);
+        }
+
+        function addWallSegment(x, z, w, d, wallMat) {
+            return addWall(x, z, w, d, 5, wallMat);
+        }
+
+        // Poolrooms are built as open chambers: each room has one or more door gaps.
+        function addPoolRoom(x, z, width, depth, wallMat, tileMat, waterMat, openings = {}) {
+            const wallThickness = 0.45;
+            const waterInset = 1.1;
+            const halfW = width / 2;
+            const halfD = depth / 2;
+            const door = 5.5;
+            const hSegments = (total, doorCount) => (total - doorCount * door) / (doorCount + 1);
+
+            // North / south walls, with a centered doorway when requested.
+            if (openings.north) {
+                const side = (width - door) / 2;
+                addWallSegment(x - (side / 2 + door / 2), z - halfD, side, wallThickness, wallMat);
+                addWallSegment(x + (side / 2 + door / 2), z - halfD, side, wallThickness, wallMat);
+            } else {
+                addWallSegment(x, z - halfD, width, wallThickness, wallMat);
+            }
+
+            if (openings.south) {
+                const side = (width - door) / 2;
+                addWallSegment(x - (side / 2 + door / 2), z + halfD, side, wallThickness, wallMat);
+                addWallSegment(x + (side / 2 + door / 2), z + halfD, side, wallThickness, wallMat);
+            } else {
+                addWallSegment(x, z + halfD, width, wallThickness, wallMat);
+            }
+
+            if (openings.west) {
+                const side = (depth - door) / 2;
+                addWallSegment(x - halfW, z - (side / 2 + door / 2), wallThickness, side, wallMat);
+                addWallSegment(x - halfW, z + (side / 2 + door / 2), wallThickness, side, wallMat);
+            } else {
+                addWallSegment(x - halfW, z, wallThickness, depth, wallMat);
+            }
+
+            if (openings.east) {
+                const side = (depth - door) / 2;
+                addWallSegment(x + halfW, z - (side / 2 + door / 2), wallThickness, side, wallMat);
+                addWallSegment(x + halfW, z + (side / 2 + door / 2), wallThickness, side, wallMat);
+            } else {
+                addWallSegment(x + halfW, z, wallThickness, depth, wallMat);
+            }
+
+            const poolFloor = new THREE.Mesh(new THREE.BoxGeometry(width - 1.0, .3, depth - 1.0), tileMat);
+            poolFloor.position.set(x, -.18, z);
+            scene.add(poolFloor);
+
+            const water = new THREE.Mesh(new THREE.PlaneGeometry(width - waterInset * 2, depth - waterInset * 2, 24, 24), waterMat);
+            water.rotation.x = -Math.PI / 2;
+            water.position.set(x, .04, z);
+            scene.add(water);
+
+            addCeilingLight(x, 4.65, z);
+            addCeilingLight(x - width * .28, 4.65, z + depth * .25);
+            addCeilingLight(x + width * .28, 4.65, z - depth * .25);
+        }
+
+        function addColumn(x, z, height, wallMat) {
+            const column = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 1.3, height, 24), wallMat);
+            column.position.set(x, height / 2, z);
+            scene.add(column);
+            // Use a conservative circular footprint for collision.
+            walls.push(new THREE.Box3(
+                new THREE.Vector3(x - 1.3, 0, z - 1.3),
+                new THREE.Vector3(x + 1.3, height, z + 1.3)
+            ));
+        }
+
+        function addPoolWaterBorder(x, z, w, d, tileMat) {
+            const border = new THREE.Mesh(new THREE.BoxGeometry(w, .25, d), tileMat);
+            border.position.set(x, -.07, z);
+            scene.add(border);
+        }
+
+        function buildLevel(levelId) {
+            clearLevelObjects();
+            currentLevel = String(levelId);
 
             let wallMat, floorMat, ceilMat, fogColor;
-
-            if (levelId === "0") {
+            if (levelId === '0') {
                 fogColor = 0xd4af37;
                 scene.background = new THREE.Color(fogColor);
                 scene.fog = new THREE.FogExp2(fogColor, 0.025);
-                wallMat = new THREE.MeshBasicMaterial({ map: createWallTexture("#d9b336", "#a68212") });
-                floorMat = new THREE.MeshBasicMaterial({ map: createFloorTexture("#967d28") });
-                ceilMat = new THREE.MeshBasicMaterial({ color: 0x332b11 });
-            } else if (levelId === "1") {
+                wallMat = new THREE.MeshStandardMaterial({ map: createWallTexture('#d9b336', '#a68212'), roughness: .95 });
+                floorMat = new THREE.MeshStandardMaterial({ map: createFloorTexture('#967d28'), roughness: 1 });
+                ceilMat = new THREE.MeshStandardMaterial({ color: 0x332b11 });
+            } else if (levelId === '1') {
                 fogColor = 0x1f1f1f;
                 scene.background = new THREE.Color(fogColor);
                 scene.fog = new THREE.FogExp2(fogColor, 0.035);
-                wallMat = new THREE.MeshBasicMaterial({ map: createWallTexture("#4d4d4d", "#262626") });
-                floorMat = new THREE.MeshBasicMaterial({ map: createFloorTexture("#1a1a1a") });
-                ceilMat = new THREE.MeshBasicMaterial({ color: 0x0a0a0a });
-            } else if (levelId === "2") {
-                // LEVEL 37: THE POOLROOMS
-                fogColor = 0x80deea;
+                wallMat = new THREE.MeshStandardMaterial({ map: createWallTexture('#4d4d4d', '#262626'), roughness: 1 });
+                floorMat = new THREE.MeshStandardMaterial({ map: createFloorTexture('#1a1a1a'), roughness: 1 });
+                ceilMat = new THREE.MeshStandardMaterial({ color: 0x0a0a0a });
+            } else {
+                // ----------------------------
+                // LEVEL 37 - POOLROOMS
+                // ----------------------------
+                fogColor = 0x76958f;
                 scene.background = new THREE.Color(fogColor);
-                scene.fog = new THREE.FogExp2(fogColor, 0.02);
-                wallMat = new THREE.MeshBasicMaterial({ map: createPoolTileTexture() });
-                floorMat = new THREE.MeshBasicMaterial({ map: createPoolTileTexture() });
-                ceilMat = new THREE.MeshBasicMaterial({ color: 0xb2ebf2 });
+                scene.fog = new THREE.FogExp2(fogColor, 0.011);
+                wallMat = new THREE.MeshStandardMaterial({ map: createPoolTileTexture(), roughness: .72, metalness: 0 });
+                floorMat = new THREE.MeshStandardMaterial({ map: createPoolTileTexture(), roughness: .82 });
+                ceilMat = new THREE.MeshStandardMaterial({ color: 0xdce7e2, roughness: 1 });
             }
 
-            // Environment Floor & Ceiling
-            const size = 120;
+            const size = levelId === '2' ? 180 : 120;
+            const b = size / 2;
+
             const floor = new THREE.Mesh(new THREE.PlaneGeometry(size, size), floorMat);
             floor.rotation.x = -Math.PI / 2;
             scene.add(floor);
@@ -297,148 +760,241 @@
             ceiling.position.y = 5;
             scene.add(ceiling);
 
-            // Lighting
-            const ambientLightColor = levelId === "2" ? 0xe0f7fa : 0xfffaed;
-            const ambient = new THREE.AmbientLight(ambientLightColor, 0.7);
+            const ambient = new THREE.AmbientLight(levelId === '2' ? 0xe9fff8 : 0xfffaed, levelId === '2' ? 0.95 : 0.7);
             scene.add(ambient);
 
-            for(let x = -40; x <= 40; x += 20) {
-                for(let z = -40; z <= 40; z += 20) {
-                    const pLight = new THREE.PointLight(levelId === "2" ? 0x80cbc4 : 0xffebaf, 0.8, 25);
-                    pLight.position.set(x, 4.5, z);
-                    scene.add(pLight);
-                }
-            }
-
-            // Maze generation helper
-            function addWall(x, z, w, d) {
-                const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, 5, d), wallMat);
-                mesh.position.set(x, 2.5, z);
-                scene.add(mesh);
-                walls.push(new THREE.Box3().setFromObject(mesh));
-            }
-
-            const b = size / 2;
-            addWall(0, -b, size, 2);
-            addWall(0, b, size, 2);
-            addWall(-b, 0, 2, size);
-            addWall(b, 0, 2, size);
-
-            for (let x = -45; x <= 45; x += 15) {
-                for (let z = -45; z <= 45; z += 15) {
-                    if (Math.random() > 0.3 && (x !== 0 || z !== 0)) {
-                        if (Math.random() > 0.5) {
-                            addWall(x, z, 12, 2);
-                        } else {
-                            addWall(x, z, 2, 12);
-                        }
+            if (levelId !== '2') {
+                for (let x = -40; x <= 40; x += 20) {
+                    for (let z = -40; z <= 40; z += 20) {
+                        const pLight = new THREE.PointLight(levelId === '1' ? 0xffffff : 0xffebaf, 0.8, 25);
+                        pLight.position.set(x, 4.5, z);
+                        scene.add(pLight);
                     }
                 }
             }
 
-            // Entity configuration depending on level
+            // Outer walls
+            addWall(0, -b, size, 2, 5, wallMat);
+            addWall(0, b, size, 2, 5, wallMat);
+            addWall(-b, 0, 2, size, 5, wallMat);
+            addWall(b, 0, 2, size, 5, wallMat);
+
+            if (levelId === '2') {
+                const waterMat = new THREE.MeshPhysicalMaterial({
+                    map: createWaterTexture(),
+                    color: 0x2c9f96,
+                    transparent: true,
+                    opacity: .76,
+                    roughness: .14,
+                    metalness: .02,
+                    transmission: .08
+                });
+
+                // Central hub and deliberately connected side chambers.
+                addPoolRoom(0, 0, 34, 28, wallMat, floorMat, waterMat, { north: true, south: true, east: true, west: true });
+                addPoolRoom(43, 0, 34, 24, wallMat, floorMat, waterMat, { west: true, south: true });
+                addPoolRoom(-43, 0, 32, 26, wallMat, floorMat, waterMat, { east: true, south: true });
+                addPoolRoom(0, -40, 28, 34, wallMat, floorMat, waterMat, { north: true, east: true });
+                addPoolRoom(42, -39, 32, 28, wallMat, floorMat, waterMat, { west: true, north: true });
+                addPoolRoom(-42, -39, 34, 30, wallMat, floorMat, waterMat, { east: true, north: true });
+                addPoolRoom(0, 40, 40, 26, wallMat, floorMat, waterMat, { north: true, east: true, west: true });
+                addPoolRoom(50, 41, 28, 24, wallMat, floorMat, waterMat, { west: true });
+                addPoolRoom(-49, 41, 30, 25, wallMat, floorMat, waterMat, { east: true });
+
+                // Cross-shaped corridors between rooms.
+                addWallSegment(20, -5, 2, 11, wallMat);
+                addWallSegment(20, -31, 2, 11, wallMat);
+                addWallSegment(-20, 5, 2, 11, wallMat);
+                addWallSegment(-20, 31, 2, 11, wallMat);
+                addWallSegment(6, -22, 11, 2, wallMat);
+                addWallSegment(32, -22, 10, 2, wallMat);
+                addWallSegment(-6, 22, 11, 2, wallMat);
+                addWallSegment(-32, 22, 10, 2, wallMat);
+
+                // Stairs / shallow platforms that break up the flat layout.
+                for (let i = 0; i < 4; i++) {
+                    const step = new THREE.Mesh(new THREE.BoxGeometry(7 - i * 0.45, 0.18, 2.2), floorMat);
+                    step.position.set(-26 + i * 0.45, 0.09 * (i + 1), 46 + i * 2.1);
+                    scene.add(step);
+                }
+
+                // Pillars placed away from doorway openings.
+                [
+                    [-10,-7],[10,-7],[-10,7],[10,7],
+                    [36,-7],[50,-7], [36,7],[50,7],
+                    [-51,-8],[-37,-8],[-51,8],[-37,8],
+                    [-10,-49],[10,-49],[-10,-30],[10,-30],
+                    [35,-48],[50,-48],[35,-30],[50,-30],
+                    [-11,34],[11,34],[-11,48],[11,48],
+                    [43,34],[57,34],[-60,34],[-46,34]
+                ].forEach(([x,z]) => addColumn(x, z, 5, wallMat));
+
+                // Darker side alcoves for contrast.
+                addWallSegment(62, 9, 2, 16, wallMat);
+                addWallSegment(62, -9, 2, 16, wallMat);
+                addWallSegment(-62, 9, 2, 16, wallMat);
+                addWallSegment(-62, -9, 2, 16, wallMat);
+
+                // Fluorescent fixtures with a few deliberate dark zones.
+                for (const [x, z] of [
+                    [0,0],[43,0],[-43,0],[0,-40],[42,-39],[-42,-39],
+                    [0,40],[50,41],[-49,41],[26,2],[-27,2],[0,-16]
+                ]) addCeilingLight(x, 4.72, z);
+            }
+
+            // Entity
             const entityGroup = new THREE.Group();
-            
-            if (levelId === "2") {
-                // Poolrooms Entity: Slow, cyan-glowing watcher creature
-                const bodyMat = new THREE.MeshBasicMaterial({ color: 0x004d40 });
-                const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.6, 2.5, 8), bodyMat);
+            if (levelId === '2') {
+                const bodyMat = new THREE.MeshStandardMaterial({ color: 0x073e38, roughness: 1 });
+                const torso = new THREE.Mesh(new THREE.CylinderGeometry(.4, .6, 2.5, 8), bodyMat);
                 torso.position.y = 1.25;
                 entityGroup.add(torso);
-
-                const head = new THREE.Mesh(new THREE.SphereGeometry(0.4, 8, 8), new THREE.MeshBasicMaterial({ color: 0x00bcd4 }));
+                const head = new THREE.Mesh(new THREE.SphereGeometry(.4, 8, 8), new THREE.MeshStandardMaterial({ color: 0x18b8ba, emissive: 0x063536, emissiveIntensity: 1.2 }));
                 head.position.y = 2.8;
                 entityGroup.add(head);
             } else {
-                // Bacteria / Warehouse Entity
-                const bodyMat = new THREE.MeshBasicMaterial({ color: 0x050505 });
-                const torso = new THREE.Mesh(new THREE.BoxGeometry(1.2, 3.5, 0.6), bodyMat);
+                const bodyMat = new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 1 });
+                const torso = new THREE.Mesh(new THREE.BoxGeometry(1.2, 3.5, .6), bodyMat);
                 torso.position.y = 2;
                 entityGroup.add(torso);
-
-                const head = new THREE.Mesh(new THREE.SphereGeometry(0.5, 8, 8), bodyMat);
-                head.position.y = 4.0;
+                const head = new THREE.Mesh(new THREE.SphereGeometry(.5, 8, 8), bodyMat);
+                head.position.y = 4;
                 entityGroup.add(head);
             }
 
-            entityGroup.position.set(20, 0, -20);
+            entityGroup.position.set(levelId === '2' ? 50 : 20, 0, levelId === '2' ? 12 : -20);
             scene.add(entityGroup);
             entity = entityGroup;
         }
 
-        function checkCollision(position) {
+        function checkCollision(position, radius = 0.42) {
+            const minY = position.y - 1.45;
+            const maxY = position.y + 0.35;
             const pBox = new THREE.Box3(
-                new THREE.Vector3(position.x - 0.4, position.y - 1.5, position.z - 0.4),
-                new THREE.Vector3(position.x + 0.4, position.y + 0.5, position.z + 0.4)
+                new THREE.Vector3(position.x - radius, minY, position.z - radius),
+                new THREE.Vector3(position.x + radius, maxY, position.z + radius)
             );
-            for (let w of walls) {
+            for (const w of walls) {
                 if (pBox.intersectsBox(w)) return true;
             }
             return false;
         }
 
+        function tryMovePlayer(dx, dz) {
+            const player = controls.getObject();
+            const maxStep = 0.22;
+            const distance = Math.hypot(dx, dz);
+            const steps = Math.max(1, Math.ceil(distance / maxStep));
+            const sx = dx / steps;
+            const sz = dz / steps;
+
+            for (let i = 0; i < steps; i++) {
+                const nextX = player.position.clone();
+                nextX.x += sx;
+                if (!checkCollision(nextX)) player.position.x = nextX.x;
+
+                const nextZ = player.position.clone();
+                nextZ.z += sz;
+                if (!checkCollision(nextZ)) player.position.z = nextZ.z;
+            }
+        }
+
+        function checkEntityCollision(position, radius = 0.65) {
+            const box = new THREE.Box3(
+                new THREE.Vector3(position.x - radius, 0, position.z - radius),
+                new THREE.Vector3(position.x + radius, 4.2, position.z + radius)
+            );
+            return walls.some(w => box.intersectsBox(w));
+        }
+
         function triggerJumpscare() {
             entityActive = false;
             controls.unlock();
+            isSprinting = false;
             document.getElementById('jumpscare').style.display = 'flex';
             setTimeout(() => {
                 document.getElementById('jumpscare').style.display = 'none';
-                camera.position.set(0, 1.6, 0);
-                entity.position.set(20, 0, -20);
+                camera.position.set(currentLevel === '2' ? 0 : 0, 1.6, 0);
+                if (entity) entity.position.set(currentLevel === '2' ? 50 : 20, 0, currentLevel === '2' ? 12 : -20);
+                stamina = MAX_STAMINA;
             }, 2000);
         }
 
         function animate() {
             requestAnimationFrame(animate);
 
-            if (controls.isLocked === true) {
-                const time = performance.now();
-                const delta = (time - prevTime) / 1000;
+            const time = performance.now();
+            const delta = Math.min((time - prevTime) / 1000, .05);
 
-                velocity.x -= velocity.x * 10.0 * delta;
-                velocity.z -= velocity.z * 10.0 * delta;
+            if (controls.isLocked === true) {
+                updateStamina(delta);
+
+                velocity.x -= velocity.x * 10 * delta;
+                velocity.z -= velocity.z * 10 * delta;
 
                 direction.z = Number(moveForward) - Number(moveBackward);
                 direction.x = Number(moveRight) - Number(moveLeft);
                 direction.normalize();
 
-                // Dynamic speed modifier if sprinting
-                const moveSpeed = isSprinting ? 80.0 : 45.0;
+                const moveSpeed = isSprinting ? 80 : 45;
 
                 if (moveForward || moveBackward) velocity.z -= direction.z * moveSpeed * delta;
                 if (moveLeft || moveRight) velocity.x -= direction.x * moveSpeed * delta;
 
-                const oldPos = controls.getObject().position.clone();
-                controls.moveRight(-velocity.x * delta);
-                if (checkCollision(controls.getObject().position)) controls.getObject().position.x = oldPos.x;
+                const player = controls.getObject();
+                const dx = -velocity.x * delta;
+                const dz = -velocity.z * delta;
+                tryMovePlayer(dx * 0.95, dz * 0.95);
 
-                controls.moveForward(-velocity.z * delta);
-                if (checkCollision(controls.getObject().position)) controls.getObject().position.z = oldPos.z;
-
-                // Entity Movement Logic
-                if (entity && entityActive) {
-                    const playerPos = controls.getObject().position;
+                // Entity movement. Host simulation is authoritative for multiplayer.
+                if (entity && entityActive && (isHost || !peer)) {
+                    const playerPos = player.position;
                     const entityPos = entity.position;
-
-                    // Poolrooms entity moves much slower and less aggressively than Level 0/1 entities
-                    const entitySpeed = (currentLevel === "2") ? 1.5 * delta : 3.5 * delta;
-
+                    const entitySpeed = (currentLevel === '2' ? 1.45 : 3.5) * delta;
                     const dirX = playerPos.x - entityPos.x;
                     const dirZ = playerPos.z - entityPos.z;
-                    const dist = Math.sqrt(dirX * dirX + dirZ * dirZ);
+                    const dist = Math.hypot(dirX, dirZ);
 
-                    if (dist > 1.0) {
-                        entityPos.x += (dirX / dist) * entitySpeed;
-                        entityPos.z += (dirZ / dist) * entitySpeed;
+                    if (dist > 1) {
+                        const next = entityPos.clone();
+                        next.x += (dirX / dist) * entitySpeed;
+                        next.z += (dirZ / dist) * entitySpeed;
+                        if (!checkEntityCollision(next, 0.72)) {
+                            entityPos.copy(next);
+                        } else {
+                            // Try sliding along the obstacle instead of getting stuck inside it.
+                            const slideX = entityPos.clone();
+                            slideX.x += (dirX / dist) * entitySpeed;
+                            if (!checkEntityCollision(slideX, 0.72)) entityPos.x = slideX.x;
+                            const slideZ = entityPos.clone();
+                            slideZ.z += (dirZ / dist) * entitySpeed;
+                            if (!checkEntityCollision(slideZ, 0.72)) entityPos.z = slideZ.z;
+                        }
                         entity.lookAt(playerPos.x, playerPos.y, playerPos.z);
                     } else {
                         triggerJumpscare();
                     }
                 }
 
-                prevTime = time;
+                networkTimer += delta;
+                if (networkTimer >= NETWORK_RATE) {
+                    networkTimer = 0;
+                    if (isHost) {
+                        sendAllPlayers();
+                    } else if (hostConnection && hostConnection.open) {
+                        sendTo(hostConnection, {
+                            type: 'position',
+                            x: player.position.x,
+                            y: player.position.y,
+                            z: player.position.z,
+                            ry: camera.rotation.y
+                        });
+                    }
+                }
             }
 
+            updateRemotePlayers(delta);
+            prevTime = time;
             renderer.render(scene, camera);
         }
     </script>
