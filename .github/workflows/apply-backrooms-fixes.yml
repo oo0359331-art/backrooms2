@@ -23,6 +23,7 @@ jobs:
           node --check remastered_horror.js
           node --check remastered_ui_system.js
           node --check living_world_upgrade.js
+          node --check character_system.js
       - name: Ensure gameplay, UI and SEO enhancements are loaded
         shell: python
         run: |
@@ -46,7 +47,8 @@ jobs:
               '    <script src="./voice_chat.js"></script>',
               '    <script src="./remastered_horror.js"></script>',
               '    <script src="./remastered_ui_system.js"></script>',
-              '    <script src="./living_world_upgrade.js"></script>'
+              '    <script src="./living_world_upgrade.js"></script>',
+              '    <script src="./character_system.js"></script>'
           ]
           insert = '\n'.join(t for t in tags if t not in s)
           if insert:
@@ -57,7 +59,7 @@ jobs:
               '    <meta name="keywords" content="Backrooms, Backrooms game, play Backrooms, Level 0, Poolrooms, Backrooms multiplayer, Backrooms online game">',
               '    <meta name="robots" content="index, follow">',
               '    <meta property="og:title" content="The Backrooms — Play the Free Online Game">',
-              '    <meta property="og:description" content="Explore the Backrooms online with multiplayer survival, Level 0, Poolrooms, mysterious levels, tasks, items, and more.">',
+              '    <meta property="og:description" content="Explore the Backrooms online with multiplayer survival, Level 0, Poolrooms, mysterious levels, tasks, and more.">',
               '    <meta property="og:type" content="website">'
           ]
           if '<meta name="description"' not in s:
@@ -74,5 +76,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
-          git diff --cached --quiet || git commit -m 'Load remastered UI and living world systems'
+          git diff --cached --quiet || git commit -m 'Load game-ready character system'
           git push
