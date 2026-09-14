@@ -254,11 +254,16 @@
         let entity;
         let entityActive = false;
         let currentLevel = '0';
+        const isTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+        const isMobileMode = isTouchDevice && window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+        let gameActive = false;
 
         // Infinite procedural world
         let worldSeed = Math.floor(Math.random() * 2147483647);
-        const CHUNK_SIZE = 28;
-        const CHUNK_RADIUS = 2;
+        const CHUNK_SIZE = 36;
+        const CHUNK_RADIUS = 1;
+        let lastChunkX = null;
+        let lastChunkZ = null;
         const loadedChunks = new Map();
         let infiniteFloor = null;
         let infiniteCeiling = null;
@@ -660,7 +665,7 @@
             camera.position.set(currentLevel === '2' ? 0 : 0, 1.6, 0);
 
             renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.15));
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.outputEncoding = THREE.sRGBEncoding;
             document.body.appendChild(renderer.domElement);
@@ -674,16 +679,22 @@
             document.getElementById('solo-btn').addEventListener('click', () => startGame('solo'));
 
             controls.addEventListener('lock', () => {
+                gameActive = true;
                 startScreen.style.display = 'none';
                 entityActive = true;
             });
 
             controls.addEventListener('unlock', () => {
-                startScreen.style.display = 'flex';
-                entityActive = false;
+                if (!isMobileMode) {
+                    gameActive = false;
+                    startScreen.style.display = 'flex';
+                    entityActive = false;
+                    isSprinting = false;
+                }
             });
 
             document.addEventListener('keydown', e => {
+                if (isMobileMode) return;
                 if (e.code === 'KeyW') moveForward = true;
                 if (e.code === 'KeyA') moveLeft = true;
                 if (e.code === 'KeyS') moveBackward = true;
@@ -694,6 +705,7 @@
             });
 
             document.addEventListener('keyup', e => {
+                if (isMobileMode) return;
                 if (e.code === 'KeyW') moveForward = false;
                 if (e.code === 'KeyA') moveLeft = false;
                 if (e.code === 'KeyS') moveBackward = false;
@@ -712,6 +724,8 @@
             walls.length = 0;
             entity = null;
             loadedChunks.clear();
+            lastChunkX = null;
+            lastChunkZ = null;
             infiniteFloor = null;
             infiniteCeiling = null;
             clearRemotePlayers();
@@ -730,17 +744,20 @@
             return mesh;
         }
 
-        function addCeilingLight(x, y, z) {
+        const lightMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        function addCeilingLight(x, y, z, addLight = true) {
             const fixture = new THREE.Mesh(
                 new THREE.BoxGeometry(3.2, .08, .8),
-                new THREE.MeshBasicMaterial({ color: 0xffffff })
+                lightMaterial
             );
             fixture.position.set(x, y, z);
             scene.add(fixture);
 
-            const light = new THREE.PointLight(0xffffff, 1.2, 24);
-            light.position.set(x, y - .15, z);
-            scene.add(light);
+            if (addLight) {
+                const light = new THREE.PointLight(0xffffff, 0.9, 20);
+                light.position.set(x, y - .15, z);
+                scene.add(light);
+            }
         }
 
         function addWallSegment(x, z, w, d, wallMat) {
@@ -897,15 +914,19 @@
             }
 
             if ((cx === 0 && cz === 0) || pattern === 3) {
-                addCeilingLight(baseX, 4.72, baseZ);
+                addCeilingLight(baseX, 4.72, baseZ, false);
             }
         }
 
-        function updateInfiniteWorld() {
+        function updateInfiniteWorld(force = false) {
             if ((currentLevel !== '0' && currentLevel !== '1') || !controls) return;
             const p = controls.getObject().position;
             const cx = Math.floor(p.x / CHUNK_SIZE);
             const cz = Math.floor(p.z / CHUNK_SIZE);
+
+            if (!force && cx === lastChunkX && cz === lastChunkZ) return;
+            lastChunkX = cx;
+            lastChunkZ = cz;
 
             for (let x = cx - CHUNK_RADIUS; x <= cx + CHUNK_RADIUS; x++) {
                 for (let z = cz - CHUNK_RADIUS; z <= cz + CHUNK_RADIUS; z++) {
@@ -994,7 +1015,7 @@
 
             if (levelId === '0' || levelId === '1') {
                 // Infinite chunked worlds.
-                updateInfiniteWorld();
+                updateInfiniteWorld(true);
             } else if (levelId === '2') {
                 const waterMat = new THREE.MeshPhysicalMaterial({
                     map: createWaterTexture(),
@@ -1097,22 +1118,22 @@
             return false;
         }
 
-        function tryMovePlayer(dx, dz) {
+        function tryMovePlayer(dx, dz, preSplitSteps = 1) {
             const player = controls.getObject();
-            const maxStep = 0.22;
+            const maxStep = 0.12;
             const distance = Math.hypot(dx, dz);
-            const steps = Math.max(1, Math.ceil(distance / maxStep));
+            const steps = Math.max(preSplitSteps || 1, Math.ceil(distance / maxStep));
             const sx = dx / steps;
             const sz = dz / steps;
 
             for (let i = 0; i < steps; i++) {
                 const nextX = player.position.clone();
                 nextX.x += sx;
-                if (!checkCollision(nextX)) player.position.x = nextX.x;
+                if (!checkCollision(nextX, 0.42)) player.position.x = nextX.x;
 
                 const nextZ = player.position.clone();
                 nextZ.z += sz;
-                if (!checkCollision(nextZ)) player.position.z = nextZ.z;
+                if (!checkCollision(nextZ, 0.42)) player.position.z = nextZ.z;
             }
         }
 
@@ -1143,25 +1164,39 @@
             const time = performance.now();
             const delta = Math.min((time - prevTime) / 1000, .05);
 
-            if (controls.isLocked === true) {
+            if (gameActive && (controls.isLocked || isMobileMode)) {
                 updateStamina(delta);
 
-                velocity.x -= velocity.x * 10 * delta;
-                velocity.z -= velocity.z * 10 * delta;
-
-                direction.z = Number(moveForward) - Number(moveBackward);
-                direction.x = Number(moveRight) - Number(moveLeft);
-                direction.normalize();
-
-                const moveSpeed = isSprinting ? 80 : 45;
-
-                if (moveForward || moveBackward) velocity.z -= direction.z * moveSpeed * delta;
-                if (moveLeft || moveRight) velocity.x -= direction.x * moveSpeed * delta;
-
                 const player = controls.getObject();
-                const dx = -velocity.x * delta;
-                const dz = -velocity.z * delta;
-                tryMovePlayer(dx * 0.95, dz * 0.95);
+                const damping = Math.exp(-10 * delta);
+                velocity.x *= damping;
+                velocity.z *= damping;
+
+                const inputX = (Number(moveRight) - Number(moveLeft)) + joystickX;
+                const inputY = (Number(moveBackward) - Number(moveForward)) + joystickZ;
+                const inputLen = Math.hypot(inputX, inputY);
+                const nx = inputLen > 1 ? inputX / inputLen : inputX;
+                const ny = inputLen > 1 ? inputY / inputLen : inputY;
+                const sprintSpeed = isSprinting && stamina > 0 ? 7.5 : 4.2;
+
+                // Camera-relative movement. W always moves where the player is looking.
+                const yaw = player.rotation.y;
+                const forwardX = -Math.sin(yaw);
+                const forwardZ = -Math.cos(yaw);
+                const rightX = Math.cos(yaw);
+                const rightZ = -Math.sin(yaw);
+                const targetX = (rightX * nx + forwardX * (-ny)) * sprintSpeed;
+                const targetZ = (rightZ * nx + forwardZ * (-ny)) * sprintSpeed;
+
+                velocity.x = targetX;
+                velocity.z = targetZ;
+
+                const maxTravel = 0.16;
+                const dxTotal = velocity.x * delta;
+                const dzTotal = velocity.z * delta;
+                const dist = Math.hypot(dxTotal, dzTotal);
+                const steps = Math.max(1, Math.ceil(dist / maxTravel));
+                tryMovePlayer(dxTotal / steps, dzTotal / steps, steps);
 
                 // Entity AI. Host simulation is authoritative for multiplayer.
                 if (entity && entityActive && (isHost || !peer)) {
@@ -1223,7 +1258,7 @@
                 }
 
                 // Keep the procedural world alive around the player as they travel.
-                updateInfiniteWorld();
+                updateInfiniteWorld(true);
 
                 networkTimer += delta;
                 if (networkTimer >= NETWORK_RATE) {
@@ -1603,7 +1638,9 @@
             buildLevel(currentLevel); camera.position.set(0,1.6,0); stamina=MAX_STAMINA; updateStamina(0); document.getElementById('hud').style.display='block'; document.getElementById('chat-panel').style.display='none';
             initializeWorldItems(); entityActive=true;
             if(mode==='host') createPeerForHost(); else if(mode==='guest') connectAsGuest(document.getElementById('room-code').value); else setNetworkStatus('SOLO');
-            controls.lock();
+            gameActive = true;
+            if (!isMobileMode) controls.lock(); else { document.getElementById('start-screen').style.display='none'; entityActive=true; }
+            document.getElementById('mobile-controls').style.display = isMobileMode ? 'block' : 'none';
         };
 
         const __oldAnimate = animate;
@@ -1616,8 +1653,10 @@
             document.getElementById('emote-menu-btn').addEventListener('click',()=>toggleChat(false)|| (document.getElementById('emote-panel').style.display='flex'));
             document.querySelectorAll('#emote-panel button[data-emote]').forEach(b=>b.addEventListener('click',()=>{triggerEmote(b.dataset.emote);document.getElementById('emote-panel').style.display='none';}));
             document.getElementById('mobile-action').addEventListener('pointerdown',tryInteract);
-            document.getElementById('mobile-sprint').addEventListener('pointerdown',()=>isSprinting=stamina>0);
-            document.getElementById('mobile-sprint').addEventListener('pointerup',()=>isSprinting=false);
+            const sprintBtn=document.getElementById('mobile-sprint');
+            sprintBtn.addEventListener('pointerdown',e=>{e.preventDefault();sprintBtn.setPointerCapture(e.pointerId);isSprinting=stamina>0;});
+            sprintBtn.addEventListener('pointerup',()=>isSprinting=false);
+            sprintBtn.addEventListener('pointercancel',()=>isSprinting=false);
             document.getElementById('mobile-emote').addEventListener('pointerdown',()=>{const p=document.getElementById('emote-panel');p.style.display=p.style.display==='flex'?'none':'flex';});
             document.getElementById('mobile-chat').addEventListener('pointerdown',()=>toggleChat());
             document.getElementById('win-close').addEventListener('click',()=>{document.getElementById('win-screen').style.display='none';document.getElementById('start-screen').style.display='flex';});
@@ -1632,15 +1671,15 @@
 
             // Touch camera look on the rest of the screen.
             const look=document.getElementById('mobile-look'); let lookId=null, lastX=0, lastY=0;
-            look.addEventListener('pointerdown',e=>{ lookId=e.pointerId; lastX=e.clientX; lastY=e.clientY; look.setPointerCapture(e.pointerId); });
-            look.addEventListener('pointermove',e=>{ if(e.pointerId!==lookId || !controls.isLocked) return; const dx=e.clientX-lastX, dy=e.clientY-lastY; lastX=e.clientX; lastY=e.clientY; camera.rotation.y -= dx*0.004; camera.rotation.x -= dy*0.004; camera.rotation.x=Math.max(-Math.PI/2,Math.min(Math.PI/2,camera.rotation.x)); });
+            look.addEventListener('pointerdown',e=>{ e.preventDefault(); lookId=e.pointerId; lastX=e.clientX; lastY=e.clientY; look.setPointerCapture(e.pointerId); });
+            look.addEventListener('pointermove',e=>{ if(e.pointerId!==lookId || !gameActive || !isMobileMode) return; const dx=e.clientX-lastX, dy=e.clientY-lastY; lastX=e.clientX; lastY=e.clientY; camera.rotation.y -= dx*0.004; camera.rotation.x -= dy*0.004; camera.rotation.x=Math.max(-Math.PI/2,Math.min(Math.PI/2,camera.rotation.x)); });
             look.addEventListener('pointerup',e=>{ if(e.pointerId===lookId) lookId=null; });
             look.addEventListener('pointercancel',e=>{ if(e.pointerId===lookId) lookId=null; });
 
             // Virtual joystick.
             const zone=document.getElementById('joystick-zone'), stick=document.getElementById('joystick-stick'); let active=false,oid=null;
             const updateJoy=(ev)=>{ const r=zone.getBoundingClientRect(); const cx=r.left+75, cy=r.bottom-75; let dx=ev.clientX-cx, dy=ev.clientY-cy; const max=55; const len=Math.hypot(dx,dy); if(len>max){dx=dx/len*max;dy=dy/len*max;} stick.style.transform=`translate(${dx}px,${dy}px)`; joystickX=dx/max; joystickZ=dy/max; moveForward=joystickZ<-.18; moveBackward=joystickZ>.18; moveLeft=joystickX<-.18; moveRight=joystickX>.18; };
-            zone.addEventListener('pointerdown',e=>{active=true;oid=e.pointerId;zone.setPointerCapture(oid);updateJoy(e);});
+            zone.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();active=true;oid=e.pointerId;zone.setPointerCapture(oid);updateJoy(e);});
             zone.addEventListener('pointermove',e=>{if(active&&e.pointerId===oid)updateJoy(e);});
             const endJoy=()=>{active=false;joystickX=joystickZ=0;moveForward=moveBackward=moveLeft=moveRight=false;stick.style.transform='translate(0,0)';};
             zone.addEventListener('pointerup',endJoy); zone.addEventListener('pointercancel',endJoy);
