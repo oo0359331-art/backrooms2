@@ -19,9 +19,9 @@ jobs:
           from pathlib import Path
           p = Path('index.html')
           s = p.read_text(encoding='utf-8')
-          marker = '</body>'
+          body_marker = '</body>'
           head_marker = '</head>'
-          if marker not in s or head_marker not in s:
+          if body_marker not in s or head_marker not in s:
               raise SystemExit('index.html is missing required HTML markers')
 
           tags = [
@@ -30,21 +30,26 @@ jobs:
               '    <script src="./level_expansion.js"></script>',
               '    <script src="./performance_upgrade.js"></script>'
           ]
-          insert = '\n'.join(t for t in tags if t not in s) + '\n'
-          if insert.strip():
-              s = s.replace(marker, insert + marker, 1)
+          insert = '\n'.join(t for t in tags if t not in s)
+          if insert:
+              s = s.replace(body_marker, insert + '\n' + body_marker, 1)
 
-          seo = '''    <meta name="description" content="Play a free Backrooms game online. Explore Level 0, Poolrooms, multiplayer survival, mysterious levels, tasks, items, and unsettling environments.">
-    <meta name="keywords" content="Backrooms, Backrooms game, play Backrooms, Level 0, Poolrooms, Backrooms multiplayer, Backrooms online game">
-    <meta name="robots" content="index, follow">
-    <meta property="og:title" content="The Backrooms — Play the Free Online Game">
-    <meta property="og:description" content="Explore the Backrooms online with multiplayer survival, Level 0, Poolrooms, mysterious levels, tasks, and more.">
-    <meta property="og:type" content="website">
-'''
+          seo_tags = [
+              '    <meta name="description" content="Play a free Backrooms game online. Explore Level 0, Poolrooms, multiplayer survival, mysterious levels, tasks, items, and unsettling environments.">',
+              '    <meta name="keywords" content="Backrooms, Backrooms game, play Backrooms, Level 0, Poolrooms, Backrooms multiplayer, Backrooms online game">',
+              '    <meta name="robots" content="index, follow">',
+              '    <meta property="og:title" content="The Backrooms — Play the Free Online Game">',
+              '    <meta property="og:description" content="Explore the Backrooms online with multiplayer survival, Level 0, Poolrooms, mysterious levels, tasks, and more.">',
+              '    <meta property="og:type" content="website">'
+          ]
           if '<meta name="description"' not in s:
-              s = s.replace(head_marker, seo + head_marker, 1)
+              s = s.replace(head_marker, '\n'.join(seo_tags) + '\n' + head_marker, 1)
 
-          s = s.replace('<title>The Backrooms - Multiplayer</title>', '<title>The Backrooms Game — Play Level 0, Poolrooms & More Online</title>', 1)
+          old_title = '<title>The Backrooms - Multiplayer</title>'
+          new_title = '<title>The Backrooms Game — Play Level 0, Poolrooms & More Online</title>'
+          if old_title in s:
+              s = s.replace(old_title, new_title, 1)
+
           p.write_text(s, encoding='utf-8')
       - name: Commit patched index
         run: |
