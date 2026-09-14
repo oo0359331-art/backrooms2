@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://oo0359331-art.github.io/backrooms2/sitemap.xml
