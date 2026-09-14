@@ -17,7 +17,7 @@
     PEACEFUL:'PEACEFUL — atmosphere & discovery'
   };
 
-  function apply(){
+  function apply(forceDefault=false){
     const sel=document.getElementById('level-select');
     if(!sel)return;
     const previous=sel.value;
@@ -35,7 +35,7 @@
       });
       sel.appendChild(og);
     }
-    const keep=LEVELS.some(x=>x.id===previous)?previous:'1';
+    const keep=!forceDefault&&LEVELS.some(x=>x.id===previous)?previous:'1';
     sel.value=keep;
     window.__backroomsLevelRoster=LEVELS.map(x=>({...x}));
     sel.dispatchEvent(new Event('change',{bubbles:true}));
@@ -53,8 +53,8 @@
     document.head.appendChild(s);
   }
 
-  function init(){css();apply();}
+  function init(){css();apply(true);}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});
   else init();
-  window.addEventListener('load',apply,{once:true});
+  window.addEventListener('load',()=>setTimeout(()=>apply(false),80),{once:true});
 })();
