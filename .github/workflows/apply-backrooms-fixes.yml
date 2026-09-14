@@ -13,6 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Validate Remastered JavaScript
+        run: node --check remastered_upgrade.js
       - name: Ensure gameplay and SEO enhancements are loaded
         shell: python
         run: |
