@@ -31,6 +31,7 @@ jobs:
           node --check level_menu_hotfix.js
           node --check stability_hotfix.js
           node --check level_launch_fix.js
+          node --check intro_game_handoff_fix.js
       - name: Ensure gameplay, UI and SEO enhancements are loaded
         shell: python
         run: |
@@ -62,7 +63,8 @@ jobs:
               '    <script src="./level_architecture_remodel.js"></script>',
               '    <script src="./level_menu_hotfix.js"></script>',
               '    <script src="./stability_hotfix.js"></script>',
-              '    <script src="./level_launch_fix.js"></script>'
+              '    <script src="./level_launch_fix.js"></script>',
+              '    <script src="./intro_game_handoff_fix.js"></script>'
           ]
           insert = '\n'.join(t for t in tags if t not in s)
           if insert:
@@ -90,5 +92,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
-          git diff --cached --quiet || git commit -m 'Load authoritative level launch fix'
+          git diff --cached --quiet || git commit -m 'Load intro game handoff fix'
           git push
