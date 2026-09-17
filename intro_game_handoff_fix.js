@@ -36,6 +36,8 @@
     loadScript('hollow-purple-script','./hollow_purple.js','__hollowPurpleLoaded');
     loadScript('playability-upgrade-script','./playability_upgrade.js','__playabilityUpgradeLoaded');
     loadScript('level-progression-script','./level_progression.js','__levelProgressionLoaded');
+    loadScript('level-visual-overhaul-script','./level_visual_overhaul.js','__levelVisualOverhaulLoaded');
+    loadScript('camera-comfort-script','./camera_comfort_fix.js','__cameraComfortLoaded');
   }
   function patch(){
     const next=q('rm-next'),skip=q('rm-skip');
