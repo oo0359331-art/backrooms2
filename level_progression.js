@@ -10,7 +10,6 @@
   };
   const REWARD_KEY = 'backrooms_hollow_purple_unlocked';
   const q = id => document.getElementById(id);
-  let progressionWrapped = false;
   let transitionBusy = false;
   let originalSendTo = null;
 
@@ -22,11 +21,6 @@
     return typeof isHost !== 'undefined' && !isHost &&
       typeof hostConnection !== 'undefined' && !hostConnection &&
       typeof roomId !== 'undefined' && !roomId;
-  }
-
-  function playerCount(){
-    try { return (typeof connections !== 'undefined' && connections && connections.size) ? connections.size + 1 : 1; }
-    catch(_) { return 1; }
   }
 
   function broadcast(type, payload){
@@ -41,8 +35,8 @@
     const name = LEVEL_NAMES[String(levelId)] || ('LEVEL ' + levelId);
     const nextName = nextId ? (LEVEL_NAMES[String(nextId)] || ('LEVEL ' + nextId)) : 'THE NEXT HELL';
     text.innerHTML = nextId
-      ? `${name} escaped.<br><strong>HELL IS COMING: ${nextName}</strong>`
-      : `${name} escaped.<br><strong>THE NEXT HELL IS COMING.</strong>`;
+      ? `<strong>YOU ESCAPED</strong><br>${name}<br><strong>HELL IS COMING: ${nextName}</strong>`
+      : `<strong>YOU ESCAPED</strong><br>${name}<br><strong>THE NEXT HELL IS COMING.</strong>`;
     screen.style.display = 'flex';
   }
 
@@ -71,10 +65,17 @@
 
   function scheduleNextLevel(completedId){
     if(transitionBusy) return;
-    transitionBusy = true;
     const nextId = NEXT_LEVEL[String(completedId)] || null;
     showEscapePopup(completedId, nextId);
 
+    // Guests wait for the host's level message. Solo and host players advance locally.
+    if(!isSolo() && !(typeof isHost !== 'undefined' && isHost)){
+      transitionBusy = true;
+      window.__levelProgressWaitingForHost = true;
+      return;
+    }
+
+    transitionBusy = true;
     if(!nextId){
       setTimeout(()=>{ transitionBusy=false; }, 3500);
       return;
@@ -83,7 +84,6 @@
     setTimeout(()=>{
       if(typeof isHost !== 'undefined' && isHost){
         broadcast('level', { level:String(nextId) });
-        try { broadcast('world', { currentLevel:String(nextId), items:[], exitOpen:false }); } catch(_) {}
       }
       resetForNextLevel(nextId);
     }, 3400);
@@ -93,12 +93,12 @@
     if(typeof window.winGame !== 'function' || window.__levelProgressWinWrapped) return !!window.__levelProgressWinWrapped;
     const oldWin = window.winGame;
     window.winGame = winGame = function(){
-      if(transitionBusy) return;
+      if(transitionBusy && !window.__levelProgressBroadcastingWin) return;
       const completedId = (typeof currentLevel !== 'undefined') ? String(currentLevel) : '0';
       oldWin.apply(this, arguments);
-      // The old playability layer grants Hollow Purple here. It is cleared when the next level starts.
+      // The existing playability layer grants Hollow Purple here. It is cleared when the next level starts.
       showEscapePopup(completedId, NEXT_LEVEL[completedId] || null);
-      if(typeof isHost !== 'undefined' && isHost){
+      if(typeof isHost !== 'undefined' && isHost && !window.__levelProgressBroadcastingWin){
         // Make the whole multiplayer room escape together.
         broadcast('win', {});
       }
@@ -113,8 +113,11 @@
     const oldBuild = window.buildLevel;
     window.buildLevel = buildLevel = function(level){
       const id = String(level);
-      // A new level always starts without the previous level's Hollow Purple reward.
-      if(typeof window.__levelProgressLastBuilt !== 'undefined' && window.__levelProgressLastBuilt !== id) clearLevelReward();
+      if(typeof window.__levelProgressLastBuilt !== 'undefined' && window.__levelProgressLastBuilt !== id){
+        clearLevelReward();
+        transitionBusy = false;
+        window.__levelProgressWaitingForHost = false;
+      }
       window.__levelProgressLastBuilt = id;
       return oldBuild.apply(this, arguments);
     };
