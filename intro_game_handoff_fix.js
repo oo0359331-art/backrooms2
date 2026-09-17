@@ -35,6 +35,7 @@
   function loadEnhancements(){
     loadScript('hollow-purple-script','./hollow_purple.js','__hollowPurpleLoaded');
     loadScript('playability-upgrade-script','./playability_upgrade.js','__playabilityUpgradeLoaded');
+    loadScript('level-progression-script','./level_progression.js','__levelProgressionLoaded');
   }
   function patch(){
     const next=q('rm-next'),skip=q('rm-skip');
