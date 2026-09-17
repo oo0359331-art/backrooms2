@@ -24,15 +24,17 @@
       if(typeof gameActive!=='undefined'&&gameActive&&start){start.style.visibility='hidden';start.style.display='none';}
     },40);
   }
-  function loadHollowPurple(){
-    if(window.__hollowPurpleLoaded || document.getElementById('hollow-purple-script')) return;
+  function loadScript(id,src,flag){
+    if(window[flag]||document.getElementById(id)) return;
     const script=document.createElement('script');
-    script.id='hollow-purple-script';
-    script.src='./hollow_purple.js';
-    script.async=false;
-    script.onload=()=>{window.__hollowPurpleLoaded=true;};
-    script.onerror=()=>{console.warn('Hollow Purple enhancement could not be loaded.');};
+    script.id=id; script.src=src; script.async=false;
+    script.onload=()=>{window[flag]=true;};
+    script.onerror=()=>{console.warn(src+' could not be loaded.');};
     document.body.appendChild(script);
+  }
+  function loadEnhancements(){
+    loadScript('hollow-purple-script','./hollow_purple.js','__hollowPurpleLoaded');
+    loadScript('playability-upgrade-script','./playability_upgrade.js','__playabilityUpgradeLoaded');
   }
   function patch(){
     const next=q('rm-next'),skip=q('rm-skip');
@@ -65,6 +67,6 @@
     }
     sync(); return true;
   }
-  function boot(){loadHollowPurple();if(!patch())return setTimeout(boot,120);setInterval(patch,500);}
+  function boot(){loadEnhancements();if(!patch())return setTimeout(boot,120);setInterval(patch,500);}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
