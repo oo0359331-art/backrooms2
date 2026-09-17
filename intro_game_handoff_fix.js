@@ -40,6 +40,7 @@
     loadScript('camera-comfort-script','./camera_comfort_fix.js','__cameraComfortLoaded');
     loadScript('friends-mode-script','./friends_mode.js','__friendsModeLoaded');
     loadScript('camera-lock-final-script','./camera_lock_final.js','__cameraLockFinalLoaded');
+    loadScript('emergency-stability-script','./backrooms_emergency_fix.js','__backroomsEmergencyLoaded');
   }
   function patch(){
     const next=q('rm-next'),skip=q('rm-skip');
